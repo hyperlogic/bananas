@@ -9,26 +9,32 @@ static int num_symbols = 0;
 
 node_t* read(const char* line)
 {
-    printf("line = \"%s\"\n", line);
     token_vec_t* vec = lex(line);
 
-    int i;
+    int i, len;
+    char temp[1024];
     for (i = 0; i < vec->num_tokens; i++) {
         switch (vec->data[i].type) {
         case SYMBOL_TOKEN:
-            printf("SYMBOL = \"%s\"\n", vec->data[i].string);
+            len = vec->data[i].end - vec->data[i].start;
+            memcpy(temp, vec->data[i].start, len);
+            temp[len] = 0;
+            printf("SYMBOL = \"%s\"\n", temp);
             break;
         case QUOTE_TOKEN:
-            printf("QUOTE = \"%s\"\n", vec->data[i].string);
+            printf("QUOTE\n");
             break;
         case LPAREN_TOKEN:
-            printf("LPAREN = \"%s\"\n", vec->data[i].string);
+            printf("LPAREN\n");
             break;
         case RPAREN_TOKEN:
-            printf("RPAREN = \"%s\"\n", vec->data[i].string);
+            printf("RPAREN\n");
             break;
         case NUMBER_TOKEN:
-            printf("NUMBER = \"%s\"\n", vec->data[i].string);
+            len = vec->data[i].end - vec->data[i].start;
+            memcpy(temp, vec->data[i].start, len);
+            temp[len] = 0;
+            printf("NUMBER = \"%s\"\n", temp);
             break;
         default:
             printf("UNKNOWN!\n");

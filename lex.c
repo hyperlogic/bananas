@@ -8,23 +8,13 @@
 #define MAX_TOKENS = 1000;
 #define MAX_NUMBER_STRING_SIZE = 1000;
 
+// don't copy the string, just point to it.
 void token_init(token_t* token, enum token_type type, const char* start, const char* end)
 {
     assert(token);
     token->type = type;
-
-    int len = end - start;
-    assert(len >= 0);
-
-    token->string = (char*)malloc(len + 1);
-    memcpy(token->string, start, len);
-    token->string[len] = 0;
-}
-
-void token_destroy(token_t* token)
-{
-    assert(token);
-    free(token->string);
+    token->start = start;
+    token->end = end;
 }
 
 token_vec_t* token_vec_new()
@@ -43,7 +33,7 @@ token_vec_t* token_vec_new()
 void token_vec_free(token_vec_t* vec)
 {
     assert(vec);
-    free(vec->data);
+    free(vec);
 }
 
 void token_vec_push(token_vec_t* vec, enum token_type type, const char* start, const char* end)
@@ -164,6 +154,8 @@ const char* token_rule(const char* p, token_vec_t* vec)
     return p;
 }
 
+// Don't forget to free the vec.
+// NOTE: tokens in the vec point directly into the source string.
 token_vec_t* lex(const char* string)
 {
     token_vec_t* vec = token_vec_new();
