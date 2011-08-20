@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 {
     char* line = 0;
     while (1) {
-        line = readline(" > ");
+        line = readline("> ");
         if (strcmp(line, "quit") == 0)
             return 0;
         if (line && *line)

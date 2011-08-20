@@ -1,4 +1,4 @@
-enum cell_type { SYMBOL_TYPE = 0, CONS_CELL_TYPE, NUMBER_TYPE };
+enum node_type { SYMBOL_NODE = 0, CELL_NODE, NUMBER_NODE, NUM_NODES };
 
 typedef struct {
     int i;
@@ -14,7 +14,7 @@ typedef struct {
 } number_t;
 
 typedef struct {
-    enum cell_type type;
+    enum node_type type;
     union {
         symbol_t symbol;
         cell_t cell;

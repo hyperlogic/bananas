@@ -5,7 +5,7 @@ GCC = gcc
 CFLAGS = -Wall -O
 LFLAGS = -lc -lreadline
 
-OBJ = bananas.o parse.o
+OBJ = bananas.o parse.o lex.o
 
 bananas: $(OBJ)
 	$(GCC) $(OBJ) -o bananas $(LFLAGS)
@@ -13,7 +13,10 @@ bananas: $(OBJ)
 bananas.o: bananas.c parse.h
 	$(GCC) $(CFLAGS) -c $<
 
-parse.o: parse.c parse.h
+parse.o: parse.c parse.h lex.h
+	$(GCC) $(CFLAGS) -c $<
+
+lex.o: lex.c lex.h
 	$(GCC) $(CFLAGS) -c $<
 
 clean:

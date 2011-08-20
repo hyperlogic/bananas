@@ -1,4 +1,5 @@
 #include "parse.h"
+#include "lex.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -8,7 +9,33 @@ static int num_symbols = 0;
 
 node_t* read(const char* line)
 {
-    printf("line = \"%s\"", line);
+    printf("line = \"%s\"\n", line);
+    token_vec_t* vec = lex(line);
+
+    int i;
+    for (i = 0; i < vec->num_tokens; i++) {
+        switch (vec->data[i].type) {
+        case SYMBOL_TOKEN:
+            printf("SYMBOL = \"%s\"\n", vec->data[i].string);
+            break;
+        case QUOTE_TOKEN:
+            printf("QUOTE = \"%s\"\n", vec->data[i].string);
+            break;
+        case LPAREN_TOKEN:
+            printf("LPAREN = \"%s\"\n", vec->data[i].string);
+            break;
+        case RPAREN_TOKEN:
+            printf("RPAREN = \"%s\"\n", vec->data[i].string);
+            break;
+        case NUMBER_TOKEN:
+            printf("NUMBER = \"%s\"\n", vec->data[i].string);
+            break;
+        default:
+            printf("UNKNOWN!\n");
+            break;
+        }
+    }
+
     return NULL;
 }
 
