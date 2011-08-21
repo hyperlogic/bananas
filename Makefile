@@ -2,7 +2,7 @@
 
 GCC = gcc
 
-CFLAGS = -Wall -O
+CFLAGS = -Wall -g
 LFLAGS = -lc -lreadline
 
 OBJ = bananas.o parse.o

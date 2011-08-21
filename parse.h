@@ -1,4 +1,4 @@
-enum node_type { SYMBOL_NODE = 0, CELL_NODE, NUMBER_NODE, CFUNC_NODE, NUM_NODES };
+enum node_type { SYMBOL_NODE = 0, CELL_NODE, NUMBER_NODE, PRIM_NODE, NUM_NODES };
 
 struct node_struct;
 
@@ -7,7 +7,7 @@ typedef struct {
     struct node_struct* cdr;
 } cell_t;
 
-typedef struct node_struct* cfunc_t(struct node_struct* args);
+typedef struct node_struct* (*prim_t)(struct node_struct* args);
 
 typedef struct node_struct {
     enum node_type type;
@@ -15,7 +15,7 @@ typedef struct node_struct {
         int symbol;
         cell_t cell;
         float number;
-        cfunc_t* cfunc;
+        prim_t prim;
     } data;
 } node_t;
 
@@ -39,16 +39,19 @@ node_t* env_lookup(env_t* env, node_t* symbol);
 node_t* make_cell_node(node_t* car, node_t* cdr);
 node_t* make_number_node(double num);
 node_t* make_symbol_node(const char* str);
-node_t* make_cfunc_node(cfunc_t* cfunc);
+node_t* make_prim_node(prim_t prim);
 
 void init();
 
-node_t* read(const char* line);
+node_t* read_string(const char* line);
 
-// cfuncs
+// these don't expect an argument list.
+#define CONS(_car, _cdr) make_cell_node(_car, _cdr)
+node_t* dump(node_t* n);
+
+// prims - all of these expect an argument list.
 node_t* eval(node_t* n);
 node_t* apply(node_t* n);
-node_t* print(node_t* n);
 node_t* cons(node_t* n);
 node_t* car(node_t* n);
 node_t* cdr(node_t* n);
@@ -56,3 +59,4 @@ node_t* cadr(node_t* n);
 node_t* def(node_t* n);
 node_t* quote(node_t* n);
 node_t* add(node_t* n);
+node_t* map(node_t* n);

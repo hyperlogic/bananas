@@ -21,13 +21,12 @@ static env_t* g_env = NULL;
 
 typedef struct { 
     const char* name;
-    cfunc_t* func;
-} cfunc_info_t;
+    prim_t prim;
+} prim_info_t;
 
-static cfunc_info_t s_cfunc_infos[] = {
+static prim_info_t s_prim_infos[] = {
     {"eval", eval}, 
     {"apply", apply}, 
-    {"print", print},
     {"cons", cons},
     {"car", car},
     {"cdr", cdr},
@@ -35,6 +34,7 @@ static cfunc_info_t s_cfunc_infos[] = {
     {"def", def},
     {"quote", quote},
     {"+", add},
+    {"map", map},
     {"", NULL}
 };
 
@@ -42,10 +42,10 @@ void init()
 {
     g_env = env_new();
 
-    // register cfuncs
-    cfunc_info_t* p = s_cfunc_infos;
-    while (p->func) {
-        env_add(g_env, make_symbol_node(p->name), make_cfunc_node(p->func));
+    // register prims
+    prim_info_t* p = s_prim_infos;
+    while (p->prim) {
+        env_add(g_env, make_symbol_node(p->name), make_prim_node(p->prim));
         p++;
     }
 }
@@ -108,7 +108,7 @@ void env_add(env_t* env, node_t* symbol, node_t* value)
         env->data = (node_t**)realloc(env->data, sizeof(node_t*) * new_max_nodes);
         env->max_nodes = new_max_nodes;
     }
-    env->data[env->num_nodes] = make_cell_node(symbol, value);
+    env->data[env->num_nodes] = CONS(symbol, value);
     env->num_nodes++;
 }
 
@@ -153,11 +153,11 @@ node_t* make_symbol_node_from_string(const char* start, const char* end)
     return node;
 }
 
-node_t* make_cfunc_node(cfunc_t* cfunc)
+node_t* make_prim_node(prim_t prim)
 {
    node_t* node = (node_t*)malloc(sizeof(node_t));
-   node->type = CFUNC_NODE;
-   node->data.cfunc = cfunc;
+   node->type = PRIM_NODE;
+   node->data.prim = prim;
    return node;
 }
 
@@ -270,7 +270,7 @@ node_t* parse_list(const char** pp)
     else
         ADVANCE();
 
-    node_t* root = make_cell_node(0, 0);
+    node_t* root = CONS(0, 0);
     node_t* p = root;
 
     while (1) {
@@ -286,7 +286,7 @@ node_t* parse_list(const char** pp)
         if (p->data.cell.car == 0)
             p->data.cell.car = car;
         else {
-            p->data.cell.cdr = make_cell_node(car, 0);
+            p->data.cell.cdr = CONS(car, 0);
             p = p->data.cell.cdr;
         }
     }
@@ -306,7 +306,7 @@ node_t* parse_quoted_expr(const char** pp)
 
     node_t* quote = make_symbol_node("quote");
     node_t* e = parse_expr(pp);
-    return make_cell_node(quote, make_cell_node(e, 0));
+    return CONS(quote, CONS(e, 0));
 }
 
 node_t* parse_expr(const char** pp)
@@ -324,7 +324,7 @@ node_t* parse_expr(const char** pp)
         return parse_atom(pp);
 }
 
-node_t* read(const char* str)
+node_t* read_string(const char* str)
 {
     return parse_expr(&str);
 }
@@ -336,12 +336,12 @@ node_t* eval(node_t* n)
     else {
         switch (n->type) {
         case NUMBER_NODE:
-        case CFUNC_NODE:
+        case PRIM_NODE:
             return n;
         case SYMBOL_NODE:
             return env_lookup(g_env, n);
         case CELL_NODE:
-            return apply(make_cell_node(eval(car(n)), cdr(n)));
+            return apply(n);
         default:
             return NULL;
         }
@@ -350,12 +350,13 @@ node_t* eval(node_t* n)
 
 node_t* apply(node_t* n)
 {
-    assert(n);
-    assert(car(n)->type == CFUNC_NODE);
-    return car(n)->data.cfunc(cdr(n));
+    assert(n && n->type == CELL_NODE);
+    node_t* f = eval(car(n));
+    assert(f && f->type == PRIM_NODE);
+    return f->data.prim(cdr(n));
 }
 
-node_t* print(node_t* n)
+node_t* dump(node_t* n)
 {
     if (!n)
         printf(" nil");
@@ -370,13 +371,13 @@ node_t* print(node_t* n)
         case CELL_NODE:
             printf(" (");
             while (n) {
-                print(car(n));
+                dump(car(n));
                 n = cdr(n);
             }
             printf(" )");
             break;
-        case CFUNC_NODE:
-            printf(" <#cfunc 0x%p>", n->data.cfunc);
+        case PRIM_NODE:
+            printf(" <#prim 0x%p>", n->data.prim);
             break;
         default:
             printf(" ???");
@@ -389,39 +390,67 @@ node_t* print(node_t* n)
 
 node_t* cons(node_t* n)
 {
-    assert(n->type == CELL_NODE);
-    return make_cell_node(car(n), car(cdr(n)));
+    assert(n && n->type == CELL_NODE);
+    return CONS(car(n), cadr(n));
 }
 
 node_t* car(node_t* n)
 {
-    assert(n->type == CELL_NODE);
+    assert(n && n->type == CELL_NODE);
     return n->data.cell.car;
 }
 
 node_t* cdr(node_t* n)
 {
-    assert(n->type == CELL_NODE);
+    assert(n && n->type == CELL_NODE);
     return n->data.cell.cdr;
 }
 
 node_t* cadr(node_t* n)
 {
+    assert(n && n->type == CELL_NODE);
     return car(cdr(n));
 }
 
 node_t* def(node_t* n)
 {
+    assert(n && n->type == CELL_NODE);
     env_add(g_env, car(n), cadr(n));
     return cadr(n);
 }
 
 node_t* quote(node_t* n)
 {
+    assert(n && n->type == CELL_NODE);
     return car(n);
 }
 
 node_t* add(node_t* n)
 {
-    return make_number_node(car(n)->data.number + cadr(n)->data.number);
+    assert(n && n->type == CELL_NODE);
+    double total = 0;
+    while (n) {
+        node_t* arg = eval(car(n));
+        total += arg->type == NUMBER_NODE ? arg->data.number : 0;
+        n = cdr(n);
+    }
+    return make_number_node(total);
+}
+
+node_t* map(node_t* n)
+{
+    assert(n && n->type == CELL_NODE);
+    node_t* f = car(n);
+    n = cdr(n);
+    node_t* nn = CONS(0, 0);
+    node_t* p = nn;
+    while (n) {
+        p->data.cell.car = apply(CONS(f, car(n)));
+        n = cdr(n);
+        if (n) {
+            p->data.cell.cdr = CONS(0, 0);
+            p = cdr(p);
+        }
+    }
+    return nn;
 }
