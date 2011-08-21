@@ -17,7 +17,7 @@ static int g_num_symbols = 0;
 
 // TODO: ref counting
 
-static env_t* g_env = NULL;
+static node_t* g_env = NULL;
 
 typedef struct { 
     const char* name;
@@ -35,17 +35,17 @@ static prim_info_t s_prim_infos[] = {
     {"quote", quote},
     {"+", add},
     {"map", map},
+    {"eq?", eq},
+    {"assoc", assoc},
     {"", NULL}
 };
 
 void init()
 {
-    g_env = env_new();
-
     // register prims
     prim_info_t* p = s_prim_infos;
     while (p->prim) {
-        env_add(g_env, make_symbol_node(p->name), make_prim_node(p->prim));
+        g_env = env_add(g_env, make_symbol_node(p->name), make_prim_node(p->prim));
         p++;
     }
 }
@@ -81,47 +81,27 @@ int symbol_add(const char* str, int len)
 }
 
 //
-// environements
+// environment
 //
-
-env_t* env_new()
+node_t* env_add(node_t* env, node_t* symbol, node_t* value)
 {
-    env_t* env = (env_t*)malloc(sizeof(env_t));
-
-    // start off with 16 nodes
-    const int initial_max_nodes = 16;
-    env->data = (node_t**)malloc(sizeof(node_t*) * initial_max_nodes);
-    env->max_nodes = initial_max_nodes;
-    env->num_nodes = 0;
-
-    return env;
+    // add to front of list.
+    // symbol value pairs are non-dotted
+    return CONS(LIST2(symbol, value), env);
 }
 
-void env_add(env_t* env, node_t* symbol, node_t* value)
+node_t* env_lookup(node_t* env, node_t* symbol)
 {
     assert(env);
     assert(symbol->type == SYMBOL_NODE);
 
-    if (env->num_nodes == env->max_nodes) {
-        // realloc more nodes!
-        int new_max_nodes = env->max_nodes * env->max_nodes;
-        env->data = (node_t**)realloc(env->data, sizeof(node_t*) * new_max_nodes);
-        env->max_nodes = new_max_nodes;
-    }
-    env->data[env->num_nodes] = CONS(symbol, value);
-    env->num_nodes++;
-}
+    printf("env_lookup()\n    env = ");
+    DUMP(env);
+    printf("\n    symbol = ");
+    DUMP(symbol);
+    printf("\n");
 
-node_t* env_lookup(env_t* env, node_t* symbol)
-{
-    assert(env);
-    assert(symbol->type == SYMBOL_NODE);
-    int i;
-    for (i = 0; i < env->num_nodes; i++) {
-        if (symbol->data.symbol == car(env->data[i])->data.symbol)
-            return env->data[i]->data.cell.cdr;
-    }
-    return NULL;
+    return ASSOC(symbol, env);
 }
 
 #define ADVANCE() *pp = *pp + 1
@@ -304,9 +284,8 @@ node_t* parse_quoted_expr(const char** pp)
     else
         PARSE_ERROR("Expected a quote");
 
-    node_t* quote = make_symbol_node("quote");
     node_t* e = parse_expr(pp);
-    return CONS(quote, CONS(e, 0));
+    return QUOTE(e);
 }
 
 node_t* parse_expr(const char** pp)
@@ -356,7 +335,7 @@ node_t* apply(node_t* n)
     return f->data.prim(cdr(n));
 }
 
-node_t* dump(node_t* n)
+node_t* DUMP(node_t* n)
 {
     if (!n)
         printf(" nil");
@@ -371,7 +350,7 @@ node_t* dump(node_t* n)
         case CELL_NODE:
             printf(" (");
             while (n) {
-                dump(car(n));
+                DUMP(car(n));
                 n = cdr(n);
             }
             printf(" )");
@@ -415,7 +394,7 @@ node_t* cadr(node_t* n)
 node_t* def(node_t* n)
 {
     assert(n && n->type == CELL_NODE);
-    env_add(g_env, car(n), cadr(n));
+    g_env = env_add(g_env, car(n), cadr(n));
     return cadr(n);
 }
 
@@ -454,3 +433,47 @@ node_t* map(node_t* n)
     }
     return nn;
 }
+
+node_t* EQ(node_t* a, node_t* b)
+{
+    if (a->type == b->type) {
+        switch (a->type) {
+        case SYMBOL_NODE:
+            return a->data.symbol == b->data.symbol ? make_symbol_node("t") : NULL;
+        case NUMBER_NODE:
+            return a->data.number == b->data.number ? make_symbol_node("t") : NULL;
+        case CELL_NODE:
+        case PRIM_NODE:
+            return a == b ? make_symbol_node("t") : NULL;
+        }
+    }
+    return NULL;
+}
+
+node_t* eq(node_t* n)
+{
+    assert(n && n->type == CELL_NODE);
+    node_t* a = eval(car(n));
+    node_t* b = eval(cadr(n));
+    return EQ(a, b);
+}
+
+node_t* ASSOC(node_t* key, node_t* plist)
+{
+    while (plist) {
+        node_t* pair = car(plist);
+        if (EQ(key, (car(pair))))
+            return cadr(pair);
+        plist = cdr(plist);
+    }
+    return NULL;
+}
+
+node_t* assoc(node_t* n)
+{
+    assert(n && n->type == CELL_NODE);
+    node_t* key = eval(car(n));
+    node_t* plist = eval(cadr(n));
+    return ASSOC(key, plist);
+}
+

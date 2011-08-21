@@ -17,13 +17,13 @@ int main(int argc, char* argv[])
         node_t* n = read_string(line);
 
         printf("read_string = \n    ");
-        dump(n);
+        DUMP(n);
         printf("\n");
 
         free(line);
         node_t* r = eval(n);
         printf("/o_O\\ => ");
-        dump(r);
+        DUMP(r);
         printf("\n");
     }
 }
