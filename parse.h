@@ -1,24 +1,18 @@
-enum node_type { SYMBOL_NODE = 0, CELL_NODE, NUMBER_NODE, NUM_NODES };
+enum node_type { SYMBOL_NODE = 0, CELL_NODE, NUMBER_NODE, NIL_NODE, NUM_NODES };
+
+struct node_struct;
 
 typedef struct {
-    int i;
-} symbol_t;
-
-typedef struct {
-    struct node_t* car;
-    struct node_t* cdr;
+    struct node_struct* car;
+    struct node_struct* cdr;
 } cell_t;
 
-typedef struct {
-    double number;
-} number_t;
-
-typedef struct {
+typedef struct node_struct {
     enum node_type type;
     union {
-        symbol_t symbol;
+        int symbol;
         cell_t cell;
-        number_t number;
+        float number;
     } data;
 } node_t;
 

@@ -8,16 +8,19 @@ int main(int argc, char* argv[])
 {
     char* line = 0;
     while (1) {
-        line = readline("> ");
+        line = readline("\\O_o/ > ");
         if (strcmp(line, "quit") == 0)
             return 0;
         if (line && *line)
             add_history(line);
         node_t* expr = read(line);
         free(line);
+        print(expr);
+        /*
         node_t* result = eval(expr);
         printf("=> ");
-        print(expr);
+        print(result);
+        */
         printf("\n");
     }
 }
