@@ -16,14 +16,16 @@ int main(int argc, char* argv[])
             add_history(line);
         node_t* n = read_string(line);
 
+        /*
         printf("read_string = \n    ");
-        DUMP(n);
+        DUMP(n, 0);
         printf("\n");
+        */
 
         free(line);
         node_t* r = eval(n);
         printf("/o_O\\ => ");
-        DUMP(r);
+        DUMP(r, 0);
         printf("\n");
     }
 }

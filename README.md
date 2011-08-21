@@ -6,15 +6,13 @@ Monkeys love bananas, lisp interpreters, not so much.
 Todo
 -----------
 
-### Envs should just be assocs.
+### Refactor
 
-Remove special case vector code.
-Add prim assoc find
+Split eval and parse stuff.  Split prims from internal functions?
 
-### Lambda Expressions
+### Envs should be nodes
 
-Add new closure node type.  { args, body, up }
-Hit up apply with new logic.
+for debugging, for modules, and to fold into ref counting.
 
 ### Node Pools
 
