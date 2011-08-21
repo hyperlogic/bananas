@@ -6,6 +6,7 @@
 
 int main(int argc, char* argv[])
 {
+    init();
     char* line = 0;
     while (1) {
         line = readline("\\O_o/ > ");

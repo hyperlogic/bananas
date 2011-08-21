@@ -16,6 +16,7 @@ typedef struct node_struct {
     } data;
 } node_t;
 
+void init();
 node_t* read(const char* line);
 node_t* eval(node_t* expr);
 void print(node_t* expr);

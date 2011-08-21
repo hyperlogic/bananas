@@ -15,6 +15,13 @@ static int g_num_symbols = 0;
         exit(1);                                                \
     } while(0)
 
+int symbol_add(const char* str, int len);
+
+void init()
+{
+
+}
+
 const char* symbol_get(int id)
 {
     assert(id >= 0 && id < MAX_SYMBOLS);
@@ -61,8 +68,6 @@ node_t* make_symbol_node(const char* start, const char* end)
 
 node_t* parse_symbol(const char** pp)
 {
-    printf("parse_symbol, pp = \"%s\"\n", *pp);
-
     const char* start = *pp;
     
     // ^[()\s\d]
@@ -103,8 +108,6 @@ node_t* make_number_node(const char* start, const char* end)
 
 node_t* parse_number(const char** pp)
 {
-    printf("parse_number, pp = \"%s\"\n", *pp);
-
     const char* start = *pp;
 
     // [+-]?
@@ -140,8 +143,6 @@ node_t* parse_number(const char** pp)
 
 node_t* parse_atom(const char** pp)
 {
-    printf("parse_atom, pp = \"%s\"\n", *pp);
-
     if (PEEK(0) == 0)
         PARSE_ERROR("Unexpected NULL character");
     else if (((PEEK(0) == '+' || PEEK(0) == '-') && isdigit(PEEK(1))) || isdigit(PEEK(0)))
@@ -163,8 +164,6 @@ node_t* parse_expr(const char** pp);
 
 node_t* parse_list(const char** pp)
 {
-    printf("parse_list, pp = \"%s\"\n", *pp);
-
     // ( EXPR* )
     if (PEEK(0) != '(')
         PARSE_ERROR("List must start with left-parenthesis");
@@ -198,10 +197,21 @@ node_t* parse_list(const char** pp)
     return root;
 }
 
+node_t* parse_quoted_expr(const char** pp)
+{
+    if (PEEK(0) == '\'')
+        ADVANCE();
+    else
+        PARSE_ERROR("Expected a quote");
+
+    const char* str = "quote";
+    node_t* quote = make_symbol_node(str, str + 5);
+    node_t* e = parse_expr(pp);
+    return make_cell_node(quote, make_cell_node(e, 0));
+}
+
 node_t* parse_expr(const char** pp)
 {
-    printf("parse_expr, pp = \"%s\"\n", *pp);
-
     while (isspace(PEEK(0)))
         ADVANCE();
 
@@ -209,6 +219,8 @@ node_t* parse_expr(const char** pp)
         PARSE_ERROR("Unexpected NULL character");
     else if (PEEK(0) == '(')
         return parse_list(pp);
+    else if (PEEK(0) == '\'')
+        return parse_quoted_expr(pp);
     else
         return parse_atom(pp);
 }
