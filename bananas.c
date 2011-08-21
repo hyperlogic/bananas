@@ -16,12 +16,9 @@ int main(int argc, char* argv[])
             add_history(line);
         node_t* expr = read(line);
         free(line);
-        print(expr);
-        /*
         node_t* result = eval(expr);
-        printf("=> ");
+        printf("/o_O\\ => ");
         print(result);
-        */
         printf("\n");
     }
 }
