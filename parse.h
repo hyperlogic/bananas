@@ -5,6 +5,6 @@
 
 void init();
 
-node_t* read_string(const char* line);
+obj_t* read_string(const char* line);
 
 #endif

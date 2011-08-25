@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
             return 0;
         if (line && *line)
             add_history(line);
-        node_t* n = read_string(line);
+        obj_t* n = read_string(line);
 
         /*
         printf("read_string = \n    ");
@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
         */
 
         free(line);
-        node_t* r = eval(n);
+        obj_t* r = eval(n);
         printf("/o_O\\ => ");
         DUMP(r, 0);
         printf("\n");

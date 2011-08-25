@@ -26,30 +26,30 @@ static prim_info_t s_prim_infos[] = {
 };
 
 extern env_t* g_env;
-extern node_t* g_true;
+extern obj_t* g_true;
 
 void prim_init()
 {
     // register prims
     prim_info_t* p = s_prim_infos;
     while (p->prim) {
-        env_add(g_env, make_symbol_node(p->name), make_prim_node(p->prim));
+        env_add(g_env, make_symbol_obj(p->name), make_prim_obj(p->prim));
         p++;
     }
 }
 
-node_t* eval(node_t* n)
+obj_t* eval(obj_t* n)
 {
     if (!n)
         return NULL;
     else {
         switch (n->type) {
-        case NUMBER_NODE:
-        case PRIM_NODE:
+        case NUMBER_OBJ:
+        case PRIM_OBJ:
             return n;
-        case SYMBOL_NODE:
+        case SYMBOL_OBJ:
             return env_lookup(g_env, n);
-        case CELL_NODE:
+        case CELL_OBJ:
             return apply(n);
         default:
             return NULL;
@@ -57,30 +57,30 @@ node_t* eval(node_t* n)
     }
 }
 
-node_t* apply(node_t* n)
+obj_t* apply(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
-    node_t* f = eval(car(n));
-    node_t* args = cdr(n);
+    assert(n && n->type == CELL_OBJ);
+    obj_t* f = eval(car(n));
+    obj_t* args = cdr(n);
     assert(f);
     switch (f->type) {
-    case PRIM_NODE:
+    case PRIM_OBJ:
         return f->data.prim(args);
-    case CLOSURE_NODE:
+    case CLOSURE_OBJ:
     {
         env_t* arg_env = env_new(f->data.closure.env);
-        node_t* closure_args = f->data.closure.args;
+        obj_t* closure_args = f->data.closure.args;
         while(args && closure_args) {
             env_add(arg_env, car(closure_args), eval(car(args)));
             args = cdr(args);
             closure_args = cdr(closure_args);
         }
-        node_t* closure_body = f->data.closure.body;
+        obj_t* closure_body = f->data.closure.body;
 
         // make sure to eval closure body with the arg_env
         env_t* orig_env = g_env;
         g_env = arg_env;
-        node_t* result = eval(closure_body);
+        obj_t* result = eval(closure_body);
         g_env = orig_env;
 
         return result;
@@ -98,19 +98,19 @@ node_t* apply(node_t* n)
             printf(args);                        \
     } while(0)
 
-node_t* DUMP(node_t* n, int to_stderr)
+obj_t* DUMP(obj_t* n, int to_stderr)
 {
     if (!n)
         PRINTF(" nil");
     else {
         switch (n->type) {
-        case NUMBER_NODE:
+        case NUMBER_OBJ:
             PRINTF(" %f", n->data.number);
             break;
-        case SYMBOL_NODE:
+        case SYMBOL_OBJ:
             PRINTF(" %s", symbol_get(n->data.symbol));
             break;
-        case CELL_NODE:
+        case CELL_OBJ:
             PRINTF(" (");
             while (n) {
                 DUMP(car(n), to_stderr);
@@ -118,10 +118,10 @@ node_t* DUMP(node_t* n, int to_stderr)
             }
             PRINTF(" )");
             break;
-        case PRIM_NODE:
+        case PRIM_OBJ:
             PRINTF(" <#prim 0x%p>", n->data.prim);
             break;
-        case CLOSURE_NODE:
+        case CLOSURE_OBJ:
             PRINTF(" <#closure ");
             DUMP(n->data.closure.args, to_stderr);
             DUMP(n->data.closure.body, to_stderr);
@@ -137,85 +137,85 @@ node_t* DUMP(node_t* n, int to_stderr)
 }
 
 
-node_t* cons(node_t* n)
+obj_t* cons(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
+    assert(n && n->type == CELL_OBJ);
     return CONS(car(n), cadr(n));
 }
 
-node_t* car(node_t* n)
+obj_t* car(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
+    assert(n && n->type == CELL_OBJ);
     return n->data.cell.car;
 }
 
-node_t* cdr(node_t* n)
+obj_t* cdr(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
+    assert(n && n->type == CELL_OBJ);
     return n->data.cell.cdr;
 }
 
-node_t* cadr(node_t* n)
+obj_t* cadr(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
+    assert(n && n->type == CELL_OBJ);
     return car(cdr(n));
 }
 
-node_t* def(node_t* n)
+obj_t* def(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
-    node_t* value = eval(cadr(n));
+    assert(n && n->type == CELL_OBJ);
+    obj_t* value = eval(cadr(n));
     env_add(g_env, car(n), value);
     return value;
 }
 
-node_t* quote(node_t* n)
+obj_t* quote(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
+    assert(n && n->type == CELL_OBJ);
     return car(n);
 }
 
-node_t* add(node_t* n)
+obj_t* add(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
+    assert(n && n->type == CELL_OBJ);
     double total = 0;
     while (n) {
-        node_t* arg = eval(car(n));
-        total += arg->type == NUMBER_NODE ? arg->data.number : 0;
+        obj_t* arg = eval(car(n));
+        total += arg->type == NUMBER_OBJ ? arg->data.number : 0;
         n = cdr(n);
     }
-    return make_number_node(total);
+    return make_number_obj(total);
 }
 
-node_t* EQ(node_t* a, node_t* b)
+obj_t* EQ(obj_t* a, obj_t* b)
 {
     if (a->type == b->type) {
         switch (a->type) {
-        case SYMBOL_NODE:
+        case SYMBOL_OBJ:
             return a->data.symbol == b->data.symbol ? g_true : NULL;
-        case NUMBER_NODE:
+        case NUMBER_OBJ:
             return a->data.number == b->data.number ? g_true : NULL;
-        case CELL_NODE:
-        case PRIM_NODE:
-        case CLOSURE_NODE:
+        case CELL_OBJ:
+        case PRIM_OBJ:
+        case CLOSURE_OBJ:
             return a == b ? g_true : NULL;
         }
     }
     return NULL;
 }
 
-node_t* eq(node_t* n)
+obj_t* eq(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
-    node_t* a = eval(car(n));
-    node_t* b = eval(cadr(n));
+    assert(n && n->type == CELL_OBJ);
+    obj_t* a = eval(car(n));
+    obj_t* b = eval(cadr(n));
     return EQ(a, b);
 }
 
-node_t* ASSOC(node_t* key, node_t* plist)
+obj_t* ASSOC(obj_t* key, obj_t* plist)
 {
     while (plist) {
-        node_t* pair = car(plist);
+        obj_t* pair = car(plist);
         if (EQ(key, (car(pair))))
             return cadr(pair);
         plist = cdr(plist);
@@ -223,25 +223,25 @@ node_t* ASSOC(node_t* key, node_t* plist)
     return NULL;
 }
 
-node_t* assoc(node_t* n)
+obj_t* assoc(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
-    node_t* key = eval(car(n));
-    node_t* plist = eval(cadr(n));
+    assert(n && n->type == CELL_OBJ);
+    obj_t* key = eval(car(n));
+    obj_t* plist = eval(cadr(n));
     return ASSOC(key, plist);
 }
 
-node_t* make_closure_node(node_t* args, node_t* body, env_t* env)
+obj_t* make_closure_obj(obj_t* args, obj_t* body, env_t* env)
 {
-    node_t* node = (node_t*)malloc(sizeof(node_t));
-    node->type = CLOSURE_NODE;
-    node->data.closure.args = args;
-    node->data.closure.body = body;
-    node->data.closure.env = env;
-    return node;
+    obj_t* obj = (obj_t*)malloc(sizeof(obj_t));
+    obj->type = CLOSURE_OBJ;
+    obj->data.closure.args = args;
+    obj->data.closure.body = body;
+    obj->data.closure.env = env;
+    return obj;
 }
 
-node_t* MEMBER(node_t* obj, node_t* lst)
+obj_t* MEMBER(obj_t* obj, obj_t* lst)
 {
     while (lst) {
         if (EQ(obj, car(lst)))
@@ -251,27 +251,27 @@ node_t* MEMBER(node_t* obj, node_t* lst)
     return NULL;
 }
 
-void capture_closure(env_t* env, node_t* args, node_t* body)
+void capture_closure(env_t* env, obj_t* args, obj_t* body)
 {
     if (!body)
         return;
 
-    if (body->type == SYMBOL_NODE && !MEMBER(body, args)) {
+    if (body->type == SYMBOL_OBJ && !MEMBER(body, args)) {
         env_add(env, body, eval(body));
-    } else if (body->type == CELL_NODE) {
+    } else if (body->type == CELL_OBJ) {
         capture_closure(env, args, car(body));
         capture_closure(env, args, cdr(body));
     }
 }
 
-node_t* lambda(node_t* n)
+obj_t* lambda(obj_t* n)
 {
-    assert(n && n->type == CELL_NODE);
-    node_t* args = car(n);
-    node_t* body = cadr(n);
+    assert(n && n->type == CELL_OBJ);
+    obj_t* args = car(n);
+    obj_t* body = cadr(n);
     env_t* env = env_new((env_t*)NULL);
 
     capture_closure(env, args, body);
 
-    return make_closure_node(args, body, env);
+    return make_closure_obj(args, body, env);
 }

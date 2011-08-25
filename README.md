@@ -8,12 +8,6 @@ Todo
 
 ### Refactor
 
-Rename node to obj.
-
-* symbols - Holds interned symbols
-* parse - Holds parse related stuff.. read_string().
-* obj - Holds obj creation functions.  make_cell(), make_number(), make_prim(), make_closure(), make_env() etc.
-        Also should hold obj pool and ref-counting funcs.
 * prims - Holds primitive forms
   * _ prefix - for internal c use only.  i.e. function takes operands directly, instead of a list.
   * $ prefix - for "operatives". i.e. functions that do not evaluate their operands.

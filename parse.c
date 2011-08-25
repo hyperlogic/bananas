@@ -15,20 +15,20 @@
 // TODO: ref counting
 
 env_t* g_env = NULL;
-node_t* g_true = NULL;
+obj_t* g_true = NULL;
 
 // TODO: find a better place.
 void init()
 {
     g_env = env_new((env_t*)NULL);
-    g_true = make_symbol_node("t");
+    g_true = make_symbol_obj("t");
     prim_init();
 }
 
 #define ADVANCE() *pp = *pp + 1
 #define PEEK(i) *(*pp + i)
 
-node_t* parse_symbol(const char** pp)
+obj_t* parse_symbol(const char** pp)
 {
     const char* start = *pp;
     
@@ -46,10 +46,10 @@ node_t* parse_symbol(const char** pp)
             ADVANCE();
     }
 
-    return make_symbol_node_from_string(start, *pp);
+    return make_symbol_obj_from_string(start, *pp);
 }
 
-node_t* make_number_node_from_string(const char* start, const char* end)
+obj_t* make_number_obj_from_string(const char* start, const char* end)
 {
     // sneaky, lets null terminate the string.
     char orig = *(end + 1);
@@ -62,10 +62,10 @@ node_t* make_number_node_from_string(const char* start, const char* end)
     // restore original charater.
     *(non_const_end + 1) = orig;
     
-    return make_number_node(num);
+    return make_number_obj(num);
 }
 
-node_t* parse_number(const char** pp)
+obj_t* parse_number(const char** pp)
 {
     const char* start = *pp;
 
@@ -87,7 +87,7 @@ node_t* parse_number(const char** pp)
     if (PEEK(0) == '.')
         ADVANCE();
     else
-        return make_number_node_from_string(start, *pp);
+        return make_number_obj_from_string(start, *pp);
     
     // [0-9]*
     while(1) {
@@ -97,10 +97,10 @@ node_t* parse_number(const char** pp)
             break;
     }
 
-    return make_number_node_from_string(start, *pp);
+    return make_number_obj_from_string(start, *pp);
 }
 
-node_t* parse_atom(const char** pp)
+obj_t* parse_atom(const char** pp)
 {
     if (PEEK(0) == 0)
         PARSE_ERROR("Unexpected NULL character");
@@ -110,9 +110,9 @@ node_t* parse_atom(const char** pp)
         return parse_symbol(pp);
 }
 
-node_t* parse_expr(const char** pp);
+obj_t* parse_expr(const char** pp);
 
-node_t* parse_list(const char** pp)
+obj_t* parse_list(const char** pp)
 {
     // ( EXPR* )
     if (PEEK(0) != '(')
@@ -120,8 +120,8 @@ node_t* parse_list(const char** pp)
     else
         ADVANCE();
 
-    node_t* root = CONS(0, 0);
-    node_t* p = root;
+    obj_t* root = CONS(0, 0);
+    obj_t* p = root;
 
     while (1) {
         while (isspace(PEEK(0)))
@@ -132,7 +132,7 @@ node_t* parse_list(const char** pp)
         else if (PEEK(0) == ')')
             break;
 
-        node_t* car = parse_expr(pp);
+        obj_t* car = parse_expr(pp);
         if (p->data.cell.car == 0)
             p->data.cell.car = car;
         else {
@@ -147,18 +147,18 @@ node_t* parse_list(const char** pp)
     return root;
 }
 
-node_t* parse_quoted_expr(const char** pp)
+obj_t* parse_quoted_expr(const char** pp)
 {
     if (PEEK(0) == '\'')
         ADVANCE();
     else
         PARSE_ERROR("Expected a quote");
 
-    node_t* e = parse_expr(pp);
+    obj_t* e = parse_expr(pp);
     return QUOTE(e);
 }
 
-node_t* parse_expr(const char** pp)
+obj_t* parse_expr(const char** pp)
 {
     while (isspace(PEEK(0)))
         ADVANCE();
@@ -173,7 +173,7 @@ node_t* parse_expr(const char** pp)
         return parse_atom(pp);
 }
 
-node_t* read_string(const char* str)
+obj_t* read_string(const char* str)
 {
     return parse_expr(&str);
 }
