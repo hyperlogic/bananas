@@ -49,22 +49,6 @@ obj_t* parse_symbol(const char** pp)
     return make_symbol2(start, *pp);
 }
 
-obj_t* make_number_obj_from_string(const char* start, const char* end)
-{
-    // sneaky, lets null terminate the string.
-    char orig = *(end + 1);
-    char* non_const_end = (char*)end;
-    *(non_const_end + 1) = 0;
-
-    // lets lean on libc to do the conversion.
-    double num = atof(start);
-
-    // restore original charater.
-    *(non_const_end + 1) = orig;
-    
-    return make_number(num);
-}
-
 obj_t* parse_number(const char** pp)
 {
     const char* start = *pp;
@@ -87,7 +71,7 @@ obj_t* parse_number(const char** pp)
     if (PEEK(0) == '.')
         ADVANCE();
     else
-        return make_number_obj_from_string(start, *pp);
+        return make_number2(start, *pp);
     
     // [0-9]*
     while(1) {
@@ -97,7 +81,7 @@ obj_t* parse_number(const char** pp)
             break;
     }
 
-    return make_number_obj_from_string(start, *pp);
+    return make_number2(start, *pp);
 }
 
 obj_t* parse_atom(const char** pp)
@@ -132,12 +116,12 @@ obj_t* parse_list(const char** pp)
         else if (PEEK(0) == ')')
             break;
 
-        obj_t* car = parse_expr(pp);
-        if (p->data.pair.car == 0)
-            p->data.pair.car = car;
+        obj_t* o = parse_expr(pp);
+        if (car(p) == 0)
+            set_car(p, o);
         else {
-            p->data.pair.cdr = cons(car, 0);
-            p = p->data.pair.cdr;
+            set_cdr(p, cons(o, make_nil()));
+            p = cdr(p);
         }
     }
 
@@ -155,7 +139,7 @@ obj_t* parse_quoted_expr(const char** pp)
         PARSE_ERROR("Expected a quote");
 
     obj_t* e = parse_expr(pp);
-    return QUOTE(e);
+    return quote(e);
 }
 
 obj_t* parse_expr(const char** pp)

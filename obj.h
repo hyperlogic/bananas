@@ -49,6 +49,7 @@ obj_t* make_nil();
 obj_t* make_symbol(const char* str);
 obj_t* make_symbol2(const char* start, const char* end);
 obj_t* make_number(double num);
+obj_t* make_number2(const char* start, const char* end);
 obj_t* make_pair(obj_t* car, obj_t* cdr);
 obj_t* make_prim(prim_t prim);
 obj_t* make_closure(obj_t* args, obj_t* body, env_t* env);
@@ -71,5 +72,12 @@ obj_t* list2(obj_t* a, obj_t* b);
 obj_t* list3(obj_t* a, obj_t* b, obj_t* c);
 void set_car(obj_t* obj, obj_t* value);
 void set_cdr(obj_t* obj, obj_t* value);
+obj_t* assoc(obj_t* key, obj_t* plist);
+obj_t* member(obj_t* obj, obj_t* lst);
+
+obj_t* eq(obj_t* a, obj_t* b);
+
+obj_t* quote(obj_t* obj);
+obj_t* dump(obj_t* n, int to_stderr);
 
 #endif

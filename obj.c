@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 //
 // environements
@@ -92,6 +93,21 @@ obj_t* make_number(double num)
     return obj;
 }
 
+obj_t* make_number2(const char* start, const char* end)
+{
+    double num = 0;
+    int len = end - start;
+    if (len > 0) {
+        char* temp = (char*)malloc(len + 1);
+        memcpy(temp, start, len);
+        temp[len] = 0;
+        num = atof(temp);
+        free(temp);
+    }
+
+    return make_number(num);
+}
+
 obj_t* make_pair(obj_t* car, obj_t* cdr)
 {
     obj_t* obj = (obj_t*)malloc(sizeof(obj_t));
@@ -173,17 +189,17 @@ obj_t* cadr(obj_t* obj)
 
 obj_t* list1(obj_t* a)
 {
-    cons(a, make_nil());
+    return cons(a, make_nil());
 }
 
 obj_t* list2(obj_t* a, obj_t* b)
 {
-    cons(a, cons(b, make_nil()));
+    return cons(a, cons(b, make_nil()));
 }
 
 obj_t* list3(obj_t* a, obj_t* b, obj_t* c)
 {
-    cons(a, cons(b, cons(c, make_nil())));
+    return cons(a, cons(b, cons(c, make_nil())));
 }
 
 void set_car(obj_t* obj, obj_t* value)
@@ -197,3 +213,93 @@ void set_cdr(obj_t* obj, obj_t* value)
     assert(is_pair(obj));
     obj->data.pair.cdr = value;
 }
+
+obj_t* assoc(obj_t* key, obj_t* plist)
+{
+    while (plist) {
+        obj_t* pair = car(plist);
+        if (eq(key, (car(pair))))
+            return cadr(pair);
+        plist = cdr(plist);
+    }
+    return NULL;
+}
+
+obj_t* member(obj_t* obj, obj_t* lst)
+{
+    while (lst) {
+        if (eq(obj, car(lst)))
+            return make_number(1);
+        lst = cdr(lst);
+    }
+    return NULL;
+}
+
+obj_t* quote(obj_t* obj)
+{
+    return list2(make_symbol("quote"), obj);
+}
+
+#define PRINTF(args...)                          \
+    do {                                         \
+        if (to_stderr)                           \
+            fprintf(stderr, args);               \
+        else                                     \
+            printf(args);                        \
+    } while(0)
+
+obj_t* dump(obj_t* obj, int to_stderr)
+{
+    if (!obj)
+        PRINTF(" nil");
+    else {
+        switch (obj->type) {
+        case NUMBER_OBJ:
+            PRINTF(" %f", obj->data.number);
+            break;
+        case SYMBOL_OBJ:
+            PRINTF(" %s", symbol_get(obj->data.symbol));
+            break;
+        case PAIR_OBJ:
+            PRINTF(" (");
+            while (obj) {
+                dump(car(obj), to_stderr);
+                obj = cdr(obj);
+            }
+            PRINTF(" )");
+            break;
+        case PRIM_OBJ:
+            PRINTF(" <#prim 0x%p>", obj->data.prim);
+            break;
+        case CLOSURE_OBJ:
+            PRINTF(" <#closure ");
+            dump(obj->data.closure.args, to_stderr);
+            dump(obj->data.closure.body, to_stderr);
+            PRINTF(" >");
+            break;
+        default:
+            PRINTF(" ???");
+            break;
+        }
+    }
+    
+    return NULL;
+}
+
+obj_t* eq(obj_t* a, obj_t* b)
+{
+    if (a->type == b->type) {
+        switch (a->type) {
+        case SYMBOL_OBJ:
+            return a->data.symbol == b->data.symbol ? make_number(1) : NULL;
+        case NUMBER_OBJ:
+            return a->data.number == b->data.number ? make_number(1) : NULL;
+        default:    
+            return a == b ? make_number(1) : NULL;
+        }
+    }
+    return NULL;
+}
+
+
+

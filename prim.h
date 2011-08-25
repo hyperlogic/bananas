@@ -5,14 +5,6 @@
 
 void prim_init();
 
-// these don't expect an argument list, nor do they eval their arguments.
-#define QUOTE(obj) list2(make_symbol("quote"), obj)
-
-obj_t* dump(obj_t* n, int to_stderr);
-obj_t* eq(obj_t* a, obj_t* b);
-obj_t* assoc(obj_t* key, obj_t* plist);
-obj_t* member(obj_t* obj, obj_t* lst);
-
 // prims
 obj_t* prim_eval(obj_t* obj);
 obj_t* prim_apply(obj_t* obj);
