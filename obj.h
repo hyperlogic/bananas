@@ -61,4 +61,15 @@ int is_prim(obj_t* obj);
 int is_pair(obj_t* obj);
 int is_closure(obj_t* obj);
 
+// pair functions
+obj_t* cons(obj_t* a, obj_t* b);
+obj_t* car(obj_t* obj);
+obj_t* cdr(obj_t* obj);
+obj_t* cadr(obj_t* obj);
+obj_t* list1(obj_t* a);
+obj_t* list2(obj_t* a, obj_t* b);
+obj_t* list3(obj_t* a, obj_t* b, obj_t* c);
+void set_car(obj_t* obj, obj_t* value);
+void set_cdr(obj_t* obj, obj_t* value);
+
 #endif

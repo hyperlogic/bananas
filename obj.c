@@ -148,3 +148,52 @@ int is_closure(obj_t* obj)
 {
     return obj->type == CLOSURE_OBJ;
 }
+
+obj_t* cons(obj_t* a, obj_t* b)
+{
+    return make_pair(a, b);
+}
+
+obj_t* car(obj_t* obj)
+{
+    assert(is_pair(obj));
+    return obj->data.pair.car;
+}
+
+obj_t* cdr(obj_t* obj)
+{
+    assert(is_pair(obj));
+    return obj->data.pair.cdr;
+}
+
+obj_t* cadr(obj_t* obj)
+{
+    return car(cdr(obj));
+}
+
+obj_t* list1(obj_t* a)
+{
+    cons(a, make_nil());
+}
+
+obj_t* list2(obj_t* a, obj_t* b)
+{
+    cons(a, cons(b, make_nil()));
+}
+
+obj_t* list3(obj_t* a, obj_t* b, obj_t* c)
+{
+    cons(a, cons(b, cons(c, make_nil())));
+}
+
+void set_car(obj_t* obj, obj_t* value)
+{
+    assert(is_pair(obj));
+    obj->data.pair.car = value;
+}
+
+void set_cdr(obj_t* obj, obj_t* value)
+{
+    assert(is_pair(obj));
+    obj->data.pair.cdr = value;
+}

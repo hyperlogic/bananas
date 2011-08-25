@@ -120,7 +120,7 @@ obj_t* parse_list(const char** pp)
     else
         ADVANCE();
 
-    obj_t* root = CONS(0, 0);
+    obj_t* root = cons(0, 0);
     obj_t* p = root;
 
     while (1) {
@@ -136,7 +136,7 @@ obj_t* parse_list(const char** pp)
         if (p->data.pair.car == 0)
             p->data.pair.car = car;
         else {
-            p->data.pair.cdr = CONS(car, 0);
+            p->data.pair.cdr = cons(car, 0);
             p = p->data.pair.cdr;
         }
     }

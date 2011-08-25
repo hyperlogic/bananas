@@ -19,14 +19,14 @@ int main(int argc, char* argv[])
 
         /*
         printf("read_string = \n    ");
-        DUMP(n, 0);
+        dump(n, 0);
         printf("\n");
         */
 
         free(line);
-        obj_t* r = eval(n);
+        obj_t* r = prim_eval(n);
         printf("/o_O\\ => ");
-        DUMP(r, 0);
+        dump(r, 0);
         printf("\n");
     }
 }
