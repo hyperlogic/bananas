@@ -33,33 +33,24 @@ void prim_init()
     // register prims
     prim_info_t* p = s_prim_infos;
     while (p->prim) {
-        env_add(g_env, make_symbol_obj(p->name), make_prim_obj(p->prim));
+        env_add(g_env, make_symbol(p->name), make_prim(p->prim));
         p++;
     }
 }
 
-obj_t* eval(obj_t* n)
+obj_t* eval(obj_t* obj)
 {
-    if (!n)
-        return NULL;
-    else {
-        switch (n->type) {
-        case NUMBER_OBJ:
-        case PRIM_OBJ:
-            return n;
-        case SYMBOL_OBJ:
-            return env_lookup(g_env, n);
-        case CELL_OBJ:
-            return apply(n);
-        default:
-            return NULL;
-        }
-    }
+    if (is_symbol(obj))
+        return env_lookup(g_env, obj);
+    else if (is_pair(obj))
+        return apply(obj);
+    else
+        return obj;
 }
 
 obj_t* apply(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
+    assert(n && n->type == PAIR_OBJ);
     obj_t* f = eval(car(n));
     obj_t* args = cdr(n);
     assert(f);
@@ -110,7 +101,7 @@ obj_t* DUMP(obj_t* n, int to_stderr)
         case SYMBOL_OBJ:
             PRINTF(" %s", symbol_get(n->data.symbol));
             break;
-        case CELL_OBJ:
+        case PAIR_OBJ:
             PRINTF(" (");
             while (n) {
                 DUMP(car(n), to_stderr);
@@ -139,31 +130,31 @@ obj_t* DUMP(obj_t* n, int to_stderr)
 
 obj_t* cons(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
+    assert(n && n->type == PAIR_OBJ);
     return CONS(car(n), cadr(n));
 }
 
 obj_t* car(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
-    return n->data.cell.car;
+    assert(n && n->type == PAIR_OBJ);
+    return n->data.pair.car;
 }
 
 obj_t* cdr(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
-    return n->data.cell.cdr;
+    assert(n && n->type == PAIR_OBJ);
+    return n->data.pair.cdr;
 }
 
 obj_t* cadr(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
+    assert(n && n->type == PAIR_OBJ);
     return car(cdr(n));
 }
 
 obj_t* def(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
+    assert(n && n->type == PAIR_OBJ);
     obj_t* value = eval(cadr(n));
     env_add(g_env, car(n), value);
     return value;
@@ -171,20 +162,20 @@ obj_t* def(obj_t* n)
 
 obj_t* quote(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
+    assert(n && n->type == PAIR_OBJ);
     return car(n);
 }
 
 obj_t* add(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
+    assert(n && n->type == PAIR_OBJ);
     double total = 0;
     while (n) {
         obj_t* arg = eval(car(n));
         total += arg->type == NUMBER_OBJ ? arg->data.number : 0;
         n = cdr(n);
     }
-    return make_number_obj(total);
+    return make_number(total);
 }
 
 obj_t* EQ(obj_t* a, obj_t* b)
@@ -195,7 +186,7 @@ obj_t* EQ(obj_t* a, obj_t* b)
             return a->data.symbol == b->data.symbol ? g_true : NULL;
         case NUMBER_OBJ:
             return a->data.number == b->data.number ? g_true : NULL;
-        case CELL_OBJ:
+        case PAIR_OBJ:
         case PRIM_OBJ:
         case CLOSURE_OBJ:
             return a == b ? g_true : NULL;
@@ -206,7 +197,7 @@ obj_t* EQ(obj_t* a, obj_t* b)
 
 obj_t* eq(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
+    assert(n && n->type == PAIR_OBJ);
     obj_t* a = eval(car(n));
     obj_t* b = eval(cadr(n));
     return EQ(a, b);
@@ -225,20 +216,10 @@ obj_t* ASSOC(obj_t* key, obj_t* plist)
 
 obj_t* assoc(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
+    assert(n && n->type == PAIR_OBJ);
     obj_t* key = eval(car(n));
     obj_t* plist = eval(cadr(n));
     return ASSOC(key, plist);
-}
-
-obj_t* make_closure_obj(obj_t* args, obj_t* body, env_t* env)
-{
-    obj_t* obj = (obj_t*)malloc(sizeof(obj_t));
-    obj->type = CLOSURE_OBJ;
-    obj->data.closure.args = args;
-    obj->data.closure.body = body;
-    obj->data.closure.env = env;
-    return obj;
 }
 
 obj_t* MEMBER(obj_t* obj, obj_t* lst)
@@ -258,7 +239,7 @@ void capture_closure(env_t* env, obj_t* args, obj_t* body)
 
     if (body->type == SYMBOL_OBJ && !MEMBER(body, args)) {
         env_add(env, body, eval(body));
-    } else if (body->type == CELL_OBJ) {
+    } else if (body->type == PAIR_OBJ) {
         capture_closure(env, args, car(body));
         capture_closure(env, args, cdr(body));
     }
@@ -266,12 +247,12 @@ void capture_closure(env_t* env, obj_t* args, obj_t* body)
 
 obj_t* lambda(obj_t* n)
 {
-    assert(n && n->type == CELL_OBJ);
+    assert(n && n->type == PAIR_OBJ);
     obj_t* args = car(n);
     obj_t* body = cadr(n);
     env_t* env = env_new((env_t*)NULL);
 
     capture_closure(env, args, body);
 
-    return make_closure_obj(args, body, env);
+    return make_closure(args, body, env);
 }

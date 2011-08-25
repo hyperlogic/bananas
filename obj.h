@@ -2,7 +2,7 @@
 #define OBJ_H
 
 // TODO: rename to obj
-enum obj_type { SYMBOL_OBJ = 0, CELL_OBJ, NUMBER_OBJ, PRIM_OBJ, CLOSURE_OBJ };
+enum obj_type { SYMBOL_OBJ = 0, PAIR_OBJ, NUMBER_OBJ, PRIM_OBJ, CLOSURE_OBJ };
 
 struct obj_struct;
 struct env_struct;
@@ -10,7 +10,7 @@ struct env_struct;
 typedef struct {
     struct obj_struct* car;
     struct obj_struct* cdr;
-} cell_t;
+} pair_t;
 
 typedef struct {
     struct obj_struct* args;
@@ -24,7 +24,7 @@ typedef struct obj_struct {
     enum obj_type type;
     union {
         int symbol;
-        cell_t cell;
+        pair_t pair;
         float number;
         prim_t prim;
         closure_t closure;
@@ -45,10 +45,20 @@ void env_add(env_t* env, obj_t* symbol, obj_t* value);
 obj_t* env_lookup(env_t* env, obj_t* symbol);
 
 // obj makers
-obj_t* make_symbol_obj(const char* str);
-obj_t* make_symbol_obj_from_string(const char* start, const char* end);
-obj_t* make_number_obj(double num);
-obj_t* make_prim_obj(prim_t prim);
-obj_t* make_cell_obj(obj_t* car, obj_t* cdr);
+obj_t* make_nil();
+obj_t* make_symbol(const char* str);
+obj_t* make_symbol2(const char* start, const char* end);
+obj_t* make_number(double num);
+obj_t* make_pair(obj_t* car, obj_t* cdr);
+obj_t* make_prim(prim_t prim);
+obj_t* make_closure(obj_t* args, obj_t* body, env_t* env);
+
+// obj type predicates
+int is_nil(obj_t* obj);
+int is_symbol(obj_t* obj);
+int is_number(obj_t* obj);
+int is_prim(obj_t* obj);
+int is_pair(obj_t* obj);
+int is_closure(obj_t* obj);
 
 #endif

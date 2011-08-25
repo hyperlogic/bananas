@@ -21,7 +21,7 @@ obj_t* g_true = NULL;
 void init()
 {
     g_env = env_new((env_t*)NULL);
-    g_true = make_symbol_obj("t");
+    g_true = make_symbol("t");
     prim_init();
 }
 
@@ -46,7 +46,7 @@ obj_t* parse_symbol(const char** pp)
             ADVANCE();
     }
 
-    return make_symbol_obj_from_string(start, *pp);
+    return make_symbol2(start, *pp);
 }
 
 obj_t* make_number_obj_from_string(const char* start, const char* end)
@@ -62,7 +62,7 @@ obj_t* make_number_obj_from_string(const char* start, const char* end)
     // restore original charater.
     *(non_const_end + 1) = orig;
     
-    return make_number_obj(num);
+    return make_number(num);
 }
 
 obj_t* parse_number(const char** pp)
@@ -133,11 +133,11 @@ obj_t* parse_list(const char** pp)
             break;
 
         obj_t* car = parse_expr(pp);
-        if (p->data.cell.car == 0)
-            p->data.cell.car = car;
+        if (p->data.pair.car == 0)
+            p->data.pair.car = car;
         else {
-            p->data.cell.cdr = CONS(car, 0);
-            p = p->data.cell.cdr;
+            p->data.pair.cdr = CONS(car, 0);
+            p = p->data.pair.cdr;
         }
     }
 
