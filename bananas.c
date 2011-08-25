@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <readline/readline.h>
 #include "parse.h"
+#include "prim.h"
 
 int main(int argc, char* argv[])
 {
