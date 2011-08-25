@@ -51,3 +51,7 @@ macro-expand
 
 Start implementing lisp code in lisp.
 
+### Dotted lists
+
+Need to modify parser. and DUMP
+
