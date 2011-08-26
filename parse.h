@@ -5,6 +5,6 @@
 
 void init();
 
-obj_t* read_string(const char* line);
+obj_t* read(const char* str);
 
 #endif

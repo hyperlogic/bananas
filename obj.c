@@ -142,27 +142,27 @@ int is_nil(obj_t* obj)
 
 int is_symbol(obj_t* obj)
 {
-    return obj->type == SYMBOL_OBJ;
+    return obj && obj->type == SYMBOL_OBJ;
 }
 
 int is_number(obj_t* obj)
 {
-    return obj->type == NUMBER_OBJ;
+    return obj && obj->type == NUMBER_OBJ;
 }
 
 int is_pair(obj_t* obj)
 {
-    return obj->type == PAIR_OBJ;
+    return obj && obj->type == PAIR_OBJ;
 }
 
 int is_prim(obj_t* obj)
 {
-    return obj->type == PRIM_OBJ;
+    return obj && obj->type == PRIM_OBJ;
 }
 
 int is_closure(obj_t* obj)
 {
-    return obj->type == CLOSURE_OBJ;
+    return obj && obj->type == CLOSURE_OBJ;
 }
 
 obj_t* cons(obj_t* a, obj_t* b)
@@ -265,6 +265,11 @@ obj_t* dump(obj_t* obj, int to_stderr)
             while (obj) {
                 dump(car(obj), to_stderr);
                 obj = cdr(obj);
+                if (obj && !is_pair(obj)) {
+                    PRINTF(" .");
+                    dump(obj, to_stderr);
+                    break;
+                }
             }
             PRINTF(" )");
             break;
@@ -288,18 +293,29 @@ obj_t* dump(obj_t* obj, int to_stderr)
 
 obj_t* eq(obj_t* a, obj_t* b)
 {
-    if (a->type == b->type) {
+    if (is_nil(a) && is_nil(b))
+        return make_number(1);
+    else if (a && b && a->type == b->type) {
         switch (a->type) {
         case SYMBOL_OBJ:
-            return a->data.symbol == b->data.symbol ? make_number(1) : NULL;
+            return a->data.symbol == b->data.symbol ? make_number(1) : make_nil();
         case NUMBER_OBJ:
-            return a->data.number == b->data.number ? make_number(1) : NULL;
+            return a->data.number == b->data.number ? make_number(1) : make_nil();
         default:    
-            return a == b ? make_number(1) : NULL;
+            return a == b ? make_number(1) : make_nil();
         }
     }
     return NULL;
 }
 
-
+obj_t* equal(obj_t* a, obj_t* b)
+{
+    if (is_pair(a) && is_pair(b)) {
+        obj_t* car_eq = equal(car(a), car(b));
+        obj_t* cdr_eq = equal(cdr(a), cdr(b));
+        return !is_nil(car_eq) && !is_nil(cdr_eq) ? make_number(1) : make_nil();
+    } else {
+        return eq(a, b);
+    }
+}
 

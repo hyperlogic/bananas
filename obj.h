@@ -75,9 +75,10 @@ void set_cdr(obj_t* obj, obj_t* value);
 obj_t* assoc(obj_t* key, obj_t* plist);
 obj_t* member(obj_t* obj, obj_t* lst);
 
-obj_t* eq(obj_t* a, obj_t* b);
-
 obj_t* quote(obj_t* obj);
 obj_t* dump(obj_t* n, int to_stderr);
+
+obj_t* eq(obj_t* a, obj_t* b);
+obj_t* equal(obj_t* a, obj_t* b);
 
 #endif

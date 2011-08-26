@@ -98,37 +98,61 @@ obj_t* parse_expr(const char** pp);
 
 obj_t* parse_list(const char** pp)
 {
-    // ( EXPR* )
+
+    // LPAREN ( RPAREN | EXPR+ (PERIOD EXPR)? RPAREN )
+
+    // LPAREN 
     if (PEEK(0) != '(')
         PARSE_ERROR("List must start with left-parenthesis");
     else
         ADVANCE();
 
-    obj_t* root = cons(0, 0);
-    obj_t* p = root;
+    if (PEEK(0) == ')')
+        return cons(0, 0);  // empty list
+    else {
+        // EXPR+
+        obj_t* root = make_nil();
+        obj_t* pair = make_nil();
+        do {
+            obj_t* obj = parse_expr(pp);
+            if (is_nil(pair)) {
+                root = cons(obj, 0);
+                pair = root;
+            } else {
+                obj_t* temp = pair;
+                pair = cons(obj, 0);
+                set_cdr(temp, pair);
+            }
 
-    while (1) {
+            while (isspace(PEEK(0)))
+                ADVANCE();
+            if (PEEK(0) == 0)
+                PARSE_ERROR("Unexpected NULL character");
+
+            if (PEEK(0) == '.' || PEEK(0) == ')')
+                break;
+            
+        } while (1);
+
+        // (PERIOD EXPR)?
+        if (PEEK(0) == '.') {
+            ADVANCE();
+            obj_t* obj = parse_expr(pp);
+            assert(pair);
+            set_cdr(pair, obj);
+        }
+
         while (isspace(PEEK(0)))
             ADVANCE();
-
         if (PEEK(0) == 0)
             PARSE_ERROR("Unexpected NULL character");
-        else if (PEEK(0) == ')')
-            break;
 
-        obj_t* o = parse_expr(pp);
-        if (car(p) == 0)
-            set_car(p, o);
-        else {
-            set_cdr(p, cons(o, make_nil()));
-            p = cdr(p);
-        }
-    }
-
-    if (PEEK(0) == ')')
+        if (PEEK(0) != ')')
+            PARSE_ERROR("Expected ) after dotted expr");
         ADVANCE();
 
-    return root;
+        return root;
+    }
 }
 
 obj_t* parse_quoted_expr(const char** pp)
@@ -157,7 +181,7 @@ obj_t* parse_expr(const char** pp)
         return parse_atom(pp);
 }
 
-obj_t* read_string(const char* str)
+obj_t* read(const char* str)
 {
     return parse_expr(&str);
 }
