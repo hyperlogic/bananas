@@ -10,6 +10,8 @@ typedef struct {
 } prim_info_t;
 
 static prim_info_t s_prim_infos[] = {
+
+    // type predicates
     {"nil?", prim_is_nil}, 
     {"symbol?", prim_is_symbol}, 
     {"number?", prim_is_number}, 
@@ -17,19 +19,34 @@ static prim_info_t s_prim_infos[] = {
     {"prim?", prim_is_prim}, 
     {"closure?", prim_is_closure}, 
     {"env?", prim_is_env}, 
-    {"eval", prim_eval}, 
-    {"apply", prim_apply}, 
+
+    // pair stuff
     {"cons", prim_cons},
     {"car", prim_car},
     {"cdr", prim_cdr},
     {"cadr", prim_cadr},
+    {"assoc", prim_assoc},
+
+    // env stuff
     {"def", prim_def},
     {"defined?", prim_defined},
-    {"quote", prim_quote},
-    {"+", prim_add},
+
+    // equality
     {"eq?", prim_is_eq},
-    {"assoc", prim_assoc},
+    {"equal?", prim_is_equal},
+
+    // math
+    {"+", prim_add},
+    {"-", prim_sub},
+    {"*", prim_mul},
+    {"/", prim_div},
+
+    // special forms
+    {"quote", prim_quote},
+    {"eval", prim_eval}, 
+    {"apply", prim_apply}, 
     {"lambda", prim_lambda},
+    {"if", prim_if},
     {"", NULL}
 };
 
@@ -42,6 +59,10 @@ void prim_init()
         p++;
     }
 }
+
+//
+// type predicates
+//
 
 obj_t* prim_is_nil(obj_t* obj)
 {
@@ -76,6 +97,107 @@ obj_t* prim_is_closure(obj_t* obj)
 obj_t* prim_is_env(obj_t* obj)
 {
     return is_env(prim_eval(obj)) ? make_true() : make_nil();
+}
+
+//
+// pair stuff
+//
+
+obj_t* prim_cons(obj_t* obj)
+{
+    obj_t* a = prim_eval(car(obj));
+    obj_t* b = prim_eval(cadr(obj));
+    return cons(a, b);
+}
+
+obj_t* prim_car(obj_t* obj)
+{
+    return prim_eval(car(obj));
+}
+
+obj_t* prim_cdr(obj_t* obj)
+{
+    return prim_eval(cdr(obj));
+}
+
+obj_t* prim_cadr(obj_t* obj)
+{
+    return prim_eval(cadr(obj));
+}
+
+obj_t* prim_assoc(obj_t* obj)
+{
+    return assoc(prim_eval(car(obj)), prim_eval(cadr(obj)));
+}
+
+//
+// env stuff
+//
+
+obj_t* prim_def(obj_t* obj)
+{
+    obj_t* symbol = car(obj);
+    obj_t* value = prim_eval(cadr(obj));
+    return def(symbol, value, g_env);
+}
+
+obj_t* prim_defined(obj_t* obj)
+{
+    obj_t* symbol = prim_eval(car(obj));
+    return defined(symbol, g_env);
+}
+
+//
+// equality
+//
+
+obj_t* prim_is_eq(obj_t* obj)
+{
+    obj_t* a = prim_eval(car(obj));
+    obj_t* b = prim_eval(cadr(obj));
+    return eq(a, b);
+}
+
+obj_t* prim_is_equal(obj_t* obj)
+{
+    obj_t* a = prim_eval(car(obj));
+    obj_t* b = prim_eval(cadr(obj));
+    return equal(a, b);
+}
+
+//
+// math
+//
+
+#define MATH_PRIM(name, op)                     \
+obj_t* prim_##name(obj_t* obj)                  \
+{                                               \
+    obj_t* root = obj;                          \
+    double accum;                               \
+    do {                                        \
+        obj_t* arg = prim_eval(car(obj));       \
+        assert(is_number(arg));                 \
+        if (obj == root)                        \
+            accum = arg->data.number;           \
+        else                                    \
+            accum op arg->data.number;          \
+        obj = cdr(obj);                         \
+    } while (obj);                              \
+    return make_number(accum);                  \
+}
+
+MATH_PRIM(add, +=)
+MATH_PRIM(sub, -=)
+MATH_PRIM(mul, *=)
+MATH_PRIM(div, /=)
+
+//
+// special forms
+//
+
+obj_t* prim_quote(obj_t* obj)
+{
+    return car(obj);
 }
 
 obj_t* prim_eval(obj_t* obj)
@@ -122,69 +244,6 @@ obj_t* prim_apply(obj_t* obj)
     }
 }
 
-obj_t* prim_cons(obj_t* obj)
-{
-    obj_t* a = prim_eval(car(obj));
-    obj_t* b = prim_eval(cadr(obj));
-    return cons(a, b);
-}
-
-obj_t* prim_car(obj_t* obj)
-{
-    return prim_eval(car(obj));
-}
-
-obj_t* prim_cdr(obj_t* obj)
-{
-    return prim_eval(cdr(obj));
-}
-
-obj_t* prim_cadr(obj_t* obj)
-{
-    return prim_eval(cadr(obj));
-}
-
-obj_t* prim_def(obj_t* obj)
-{
-    obj_t* symbol = car(obj);
-    obj_t* value = prim_eval(cadr(obj));
-    return def(symbol, value, g_env);
-}
-
-obj_t* prim_defined(obj_t* obj)
-{
-    obj_t* symbol = prim_eval(car(obj));
-    return defined(symbol, g_env);
-}
-
-obj_t* prim_quote(obj_t* obj)
-{
-    return car(obj);
-}
-
-obj_t* prim_add(obj_t* obj)
-{
-    double total = 0;
-    while (obj) {
-        obj_t* arg = prim_eval(car(obj));
-        total += is_number(arg) ? arg->data.number : 0;
-        obj = cdr(obj);
-    }
-    return make_number(total);
-}
-
-obj_t* prim_is_eq(obj_t* obj)
-{
-    obj_t* a = prim_eval(car(obj));
-    obj_t* b = prim_eval(cadr(obj));
-    return eq(a, b);
-}
-
-obj_t* prim_assoc(obj_t* obj)
-{
-    return assoc(prim_eval(car(obj)), prim_eval(cadr(obj)));
-}
-
 static void capture_closure(obj_t* env, obj_t* args, obj_t* body)
 {
     if (!body)
@@ -200,7 +259,6 @@ static void capture_closure(obj_t* env, obj_t* args, obj_t* body)
 
 obj_t* prim_lambda(obj_t* n)
 {
-    assert(n && n->type == PAIR_OBJ);
     obj_t* args = car(n);
     obj_t* body = cadr(n);
     obj_t* env = make_env(make_nil(), make_nil());
@@ -208,4 +266,17 @@ obj_t* prim_lambda(obj_t* n)
     capture_closure(env, args, body);
 
     return make_closure(args, body, env);
+}
+
+obj_t* prim_if(obj_t* obj)
+{
+    obj_t* expr = prim_eval(car(obj));
+    obj_t* true_body = car(cdr(obj));
+    obj_t* else_body = car(cdr(cdr(obj)));
+    if (!is_nil(expr))
+        return prim_eval(true_body);
+    else if (!is_nil(else_body))
+        return prim_eval(else_body);
+    else
+        return make_nil();
 }

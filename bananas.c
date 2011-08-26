@@ -47,6 +47,8 @@ void test_suite()
         {TEST, "'(1 . 2)", cons(make_number(1), make_number(2))},
         {EVAL, "(def ten nil)"},
         {EVAL, "(def plus-ten nil)"},
+        //{EVAL, "(def factorial (lambda (n) (if (eq? n 0) 1 (* n (factorial (- n 1))))))"},
+        //{TEST, "(factorial 0)", make_number(1)},
         {END, NULL, NULL}
     };
 
