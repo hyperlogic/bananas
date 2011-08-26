@@ -1,62 +1,27 @@
 #include "obj.h"
 #include "symbol.h"
+#include "prim.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
 
-//
-// environements
-//
-env_t* env_new(env_t* parent)
+obj_t* g_env = NULL;
+
+void init()
 {
-    env_t* env = (env_t*)malloc(sizeof(env_t));
-
-    // start off with 16 objs
-    const int initial_max_objs = 16;
-    env->data = (obj_t**)malloc(sizeof(obj_t*) * initial_max_objs);
-    env->max_objs = initial_max_objs;
-    env->num_objs = 0;
-    env->parent = parent;
-
-    return env;
-}
-
-void env_add(env_t* env, obj_t* symbol, obj_t* value)
-{
-    assert(env);
-    assert(symbol->type == SYMBOL_OBJ);
-
-    if (env->num_objs == env->max_objs) {
-        // realloc more objs!
-        int new_max_objs = env->max_objs * env->max_objs;
-        env->data = (obj_t**)realloc(env->data, sizeof(obj_t*) * new_max_objs);
-        env->max_objs = new_max_objs;
-    }
-    env->data[env->num_objs] = make_pair(symbol, value);
-    env->num_objs++;
-}
-
-obj_t* env_lookup(env_t* env, obj_t* symbol)
-{
-    int i;
-    
-    assert(env);
-    assert(symbol->type == SYMBOL_OBJ);
-    for (i = 0; i < env->num_objs; i++) {
-        if (symbol->data.symbol == env->data[i]->data.pair.car->data.symbol)
-            return env->data[i]->data.pair.cdr;
-    }
-
-    if (env->parent)
-        return env_lookup(env->parent, symbol);
-    else
-        return NULL;
+    g_env = make_env(make_nil(), make_nil());
+    prim_init();
 }
 
 obj_t* make_nil()
 {
     return NULL;
+}
+
+obj_t* make_true()
+{
+    return make_number(1);
 }
 
 obj_t* make_symbol(const char* str)
@@ -125,13 +90,22 @@ obj_t* make_prim(prim_t prim)
    return obj;
 }
 
-obj_t* make_closure(obj_t* args, obj_t* body, env_t* env)
+obj_t* make_closure(obj_t* args, obj_t* body, obj_t* env)
 {
     obj_t* obj = (obj_t*)malloc(sizeof(obj_t));
     obj->type = CLOSURE_OBJ;
     obj->data.closure.args = args;
     obj->data.closure.body = body;
     obj->data.closure.env = env;
+    return obj;
+}
+
+obj_t* make_env(obj_t* plist, obj_t* parent)
+{
+    obj_t* obj = (obj_t*)malloc(sizeof(obj_t));
+    obj->type = ENV_OBJ;
+    obj->data.env.plist = plist;
+    obj->data.env.parent = parent;
     return obj;
 }
 
@@ -163,6 +137,11 @@ int is_prim(obj_t* obj)
 int is_closure(obj_t* obj)
 {
     return obj && obj->type == CLOSURE_OBJ;
+}
+
+int is_env(obj_t* obj)
+{
+    return obj && obj->type == ENV_OBJ;
 }
 
 obj_t* cons(obj_t* a, obj_t* b)
@@ -214,23 +193,24 @@ void set_cdr(obj_t* obj, obj_t* value)
     obj->data.pair.cdr = value;
 }
 
-obj_t* assoc(obj_t* key, obj_t* plist)
-{
-    while (plist) {
-        obj_t* pair = car(plist);
-        if (eq(key, (car(pair))))
-            return cadr(pair);
-        plist = cdr(plist);
-    }
-    return NULL;
-}
-
 obj_t* member(obj_t* obj, obj_t* lst)
 {
     while (lst) {
         if (eq(obj, car(lst)))
-            return make_number(1);
+            return make_true();
         lst = cdr(lst);
+    }
+    return NULL;
+}
+
+// dotted plist, and returns cdr of plist pair.
+obj_t* assoc(obj_t* key, obj_t* plist)
+{
+    while (plist) {
+        obj_t* pair = car(plist);
+        if (equal(key, (car(pair))))
+            return cdr(pair);
+        plist = cdr(plist);
     }
     return NULL;
 }
@@ -294,15 +274,15 @@ obj_t* dump(obj_t* obj, int to_stderr)
 obj_t* eq(obj_t* a, obj_t* b)
 {
     if (is_nil(a) && is_nil(b))
-        return make_number(1);
+        return make_true();
     else if (a && b && a->type == b->type) {
         switch (a->type) {
         case SYMBOL_OBJ:
-            return a->data.symbol == b->data.symbol ? make_number(1) : make_nil();
+            return a->data.symbol == b->data.symbol ? make_true() : make_nil();
         case NUMBER_OBJ:
-            return a->data.number == b->data.number ? make_number(1) : make_nil();
+            return a->data.number == b->data.number ? make_true() : make_nil();
         default:    
-            return a == b ? make_number(1) : make_nil();
+            return a == b ? make_true() : make_nil();
         }
     }
     return NULL;
@@ -313,9 +293,55 @@ obj_t* equal(obj_t* a, obj_t* b)
     if (is_pair(a) && is_pair(b)) {
         obj_t* car_eq = equal(car(a), car(b));
         obj_t* cdr_eq = equal(cdr(a), cdr(b));
-        return !is_nil(car_eq) && !is_nil(cdr_eq) ? make_number(1) : make_nil();
+        return !is_nil(car_eq) && !is_nil(cdr_eq) ? make_true() : make_nil();
     } else {
         return eq(a, b);
     }
 }
 
+obj_t* def(obj_t* symbol, obj_t* value, obj_t* env)
+{
+    assert(is_symbol(symbol));
+    if (is_nil(env))
+        env = g_env;
+    assert(env);
+
+    obj_t* plist = env->data.env.plist;
+    if (plist) {
+        // iterate over plist.
+        obj_t* prev = plist;
+        while (plist) {
+            obj_t* pair = car(plist);
+            if (eq(symbol, car(pair)))
+                break;
+            prev = plist;
+            plist = cdr(plist);
+        }
+
+        if (plist)
+            set_cdr(car(plist), value);
+        else 
+            set_cdr(prev, cons(cons(symbol, value), make_nil()));
+    } else
+        env->data.env.plist = cons(cons(symbol, value), make_nil());
+
+    return value;
+}
+
+obj_t* defined(obj_t* symbol, obj_t* env)
+{
+    assert(is_symbol(symbol));
+    if (is_nil(env))
+        env = g_env;
+    assert(env);
+
+    obj_t* result = assoc(symbol, env->data.env.plist);
+    if (result)
+        return result;
+    else {
+        if (is_env(env->data.env.parent))
+            return defined(symbol, env->data.env.parent);
+        else
+            return make_nil();
+    }
+}

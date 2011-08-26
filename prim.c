@@ -10,6 +10,13 @@ typedef struct {
 } prim_info_t;
 
 static prim_info_t s_prim_infos[] = {
+    {"nil?", prim_is_nil}, 
+    {"symbol?", prim_is_symbol}, 
+    {"number?", prim_is_number}, 
+    {"pair?", prim_is_pair}, 
+    {"prim?", prim_is_prim}, 
+    {"closure?", prim_is_closure}, 
+    {"env?", prim_is_env}, 
     {"eval", prim_eval}, 
     {"apply", prim_apply}, 
     {"cons", prim_cons},
@@ -17,31 +24,64 @@ static prim_info_t s_prim_infos[] = {
     {"cdr", prim_cdr},
     {"cadr", prim_cadr},
     {"def", prim_def},
+    {"defined?", prim_defined},
     {"quote", prim_quote},
     {"+", prim_add},
-    {"eq?", prim_eq},
+    {"eq?", prim_is_eq},
     {"assoc", prim_assoc},
     {"lambda", prim_lambda},
     {"", NULL}
 };
-
-extern env_t* g_env;
-extern obj_t* g_true;
 
 void prim_init()
 {
     // register prims
     prim_info_t* p = s_prim_infos;
     while (p->prim) {
-        env_add(g_env, make_symbol(p->name), make_prim(p->prim));
+        def(make_symbol(p->name), make_prim(p->prim), g_env);
         p++;
     }
+}
+
+obj_t* prim_is_nil(obj_t* obj)
+{
+    return is_nil(prim_eval(obj)) ? make_true() : make_nil();
+}
+
+obj_t* prim_is_symbol(obj_t* obj)
+{
+    return is_symbol(prim_eval(obj)) ? make_true() : make_nil();
+}
+
+obj_t* prim_is_number(obj_t* obj)
+{
+    return is_number(prim_eval(obj)) ? make_true() : make_nil();
+}
+
+obj_t* prim_is_pair(obj_t* obj)
+{
+    return is_pair(prim_eval(obj)) ? make_true() : make_nil();
+}
+
+obj_t* prim_is_prim(obj_t* obj)
+{
+    return is_prim(prim_eval(obj)) ? make_true() : make_nil();
+}
+
+obj_t* prim_is_closure(obj_t* obj)
+{
+    return is_closure(prim_eval(obj)) ? make_true() : make_nil();
+}
+
+obj_t* prim_is_env(obj_t* obj)
+{
+    return is_env(prim_eval(obj)) ? make_true() : make_nil();
 }
 
 obj_t* prim_eval(obj_t* obj)
 {
     if (is_symbol(obj))
-        return env_lookup(g_env, obj);
+        return defined(obj, g_env);
     else if (is_pair(obj))
         return prim_apply(obj);
     else
@@ -59,18 +99,19 @@ obj_t* prim_apply(obj_t* obj)
         return f->data.prim(args);
     case CLOSURE_OBJ:
     {
-        env_t* arg_env = env_new(f->data.closure.env);
+        obj_t* local_env = make_env(make_nil(), f->data.closure.env);
         obj_t* closure_args = f->data.closure.args;
         while(args && closure_args) {
-            env_add(arg_env, car(closure_args), prim_eval(car(args)));
+            def(car(closure_args), prim_eval(car(args)), local_env);
             args = cdr(args);
             closure_args = cdr(closure_args);
         }
         obj_t* closure_body = f->data.closure.body;
 
-        // make sure to eval closure body with the arg_env
-        env_t* orig_env = g_env;
-        g_env = arg_env;
+        // TODO: eval should take an env argument.
+        // make sure to eval closure body with the local_env
+        obj_t* orig_env = g_env;
+        g_env = local_env;
         obj_t* result = prim_eval(closure_body);
         g_env = orig_env;
 
@@ -105,13 +146,15 @@ obj_t* prim_cadr(obj_t* obj)
 
 obj_t* prim_def(obj_t* obj)
 {
+    obj_t* symbol = car(obj);
     obj_t* value = prim_eval(cadr(obj));
+    return def(symbol, value, g_env);
+}
 
-    // AJT: TODO: BUG: FIXME: env_add does not remove original value from env
-    // just adds it on the end.
-
-    env_add(g_env, car(obj), value);
-    return value;
+obj_t* prim_defined(obj_t* obj)
+{
+    obj_t* symbol = prim_eval(car(obj));
+    return defined(symbol, g_env);
 }
 
 obj_t* prim_quote(obj_t* obj)
@@ -130,7 +173,7 @@ obj_t* prim_add(obj_t* obj)
     return make_number(total);
 }
 
-obj_t* prim_eq(obj_t* obj)
+obj_t* prim_is_eq(obj_t* obj)
 {
     obj_t* a = prim_eval(car(obj));
     obj_t* b = prim_eval(cadr(obj));
@@ -139,18 +182,16 @@ obj_t* prim_eq(obj_t* obj)
 
 obj_t* prim_assoc(obj_t* obj)
 {
-    obj_t* key = prim_eval(car(obj));
-    obj_t* plist = prim_eval(cadr(obj));
-    return assoc(key, plist);
+    return assoc(prim_eval(car(obj)), prim_eval(cadr(obj)));
 }
 
-void capture_closure(env_t* env, obj_t* args, obj_t* body)
+static void capture_closure(obj_t* env, obj_t* args, obj_t* body)
 {
     if (!body)
         return;
 
     if (body->type == SYMBOL_OBJ && !member(body, args)) {
-        env_add(env, body, prim_eval(body));
+        def(body, prim_eval(body), env);
     } else if (body->type == PAIR_OBJ) {
         capture_closure(env, args, car(body));
         capture_closure(env, args, cdr(body));
@@ -162,7 +203,7 @@ obj_t* prim_lambda(obj_t* n)
     assert(n && n->type == PAIR_OBJ);
     obj_t* args = car(n);
     obj_t* body = cadr(n);
-    env_t* env = env_new((env_t*)NULL);
+    obj_t* env = make_env(make_nil(), make_nil());
 
     capture_closure(env, args, body);
 

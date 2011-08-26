@@ -6,9 +6,9 @@ Monkeys love bananas, parenthesis, not so much.
 TODO
 -----------
 
-### Bugs
+### first class envs 
 
-* def should replace an existing binding.
+eval and apply should take env argument, make-env
 
 ### Bootstrap
 
@@ -16,10 +16,6 @@ Let's start writing lisp code in lisp.
 Instead of all these c functions. Yuk.
 
 What is the minimal set of prims that we need?
-
-### first class envs 
-
-eval and apply should take env argument, make-env
 
 ### Obj Pools
 

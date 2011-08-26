@@ -14,17 +14,6 @@
 
 // TODO: ref counting
 
-env_t* g_env = NULL;
-obj_t* g_true = NULL;
-
-// TODO: find a better place.
-void init()
-{
-    g_env = env_new((env_t*)NULL);
-    g_true = make_symbol("t");
-    prim_init();
-}
-
 #define ADVANCE() *pp = *pp + 1
 #define PEEK(i) *(*pp + i)
 

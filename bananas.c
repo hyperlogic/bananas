@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <readline/readline.h>
+#include "obj.h"
 #include "parse.h"
 #include "prim.h"
 
@@ -23,8 +24,6 @@ int run_test(const char* input, obj_t* expected)
         return 0;
 }
 
-extern env_t* g_env;
-
 typedef enum { TEST = 0, EVAL, END } test_type;
 
 typedef struct {
@@ -41,12 +40,13 @@ void test_suite()
         {TEST, "(+ 1 2)", make_number(3)},
         {EVAL, "(def ten 10)", NULL},
         {TEST, "ten", make_number(10)},
-        {TEST, "car", env_lookup(g_env, make_symbol("car"))},
         {EVAL, "(def plus-ten (lambda (x) (+ x ten)))", NULL},
         {EVAL, "(def ten 0)", NULL},
         {TEST, "ten", make_number(0)},
         {TEST, "(plus-ten 10)", make_number(20)},
         {TEST, "'(1 . 2)", cons(make_number(1), make_number(2))},
+        {EVAL, "(def ten nil)"},
+        {EVAL, "(def plus-ten nil)"},
         {END, NULL, NULL}
     };
 
