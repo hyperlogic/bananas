@@ -1,4 +1,5 @@
 #include "obj.h"
+#include "parse.h"
 #include "symbol.h"
 #include "prim.h"
 #include <stdlib.h>
@@ -533,5 +534,10 @@ void init()
     pool_init();
     g_env = make_env(make_nil(), make_nil());
     prim_init();
+    
+    // boot strap
+    obj_t* seq = read_file("bootstrap.ooo");
+    dump(seq, 1);
+    fprintf(stderr, "\n");
 }
 

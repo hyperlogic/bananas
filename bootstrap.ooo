@@ -1,0 +1,2 @@
+(def plus1 (x) (+ x 1))
+(def ten 10) 

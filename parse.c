@@ -176,7 +176,43 @@ obj_t* parse_expr(const char** pp)
         return parse_atom(pp);
 }
 
+obj_t* parse_expr_sequence(const char** pp)
+{
+    // EXPR*
+    obj_t* root = cons(make_symbol("sequence"), make_nil());
+    obj_t* pair = root;
+    while(1) {
+        while (isspace(PEEK(0)))
+            ADVANCE();
+        if (PEEK(0) == 0)
+            break;
+        set_cdr(pair, cons(parse_expr(pp), make_nil()));
+        pair = cdr(pair);
+    }
+    return root;
+}
+
 obj_t* read(const char* str)
 {
     return parse_expr(&str);
+}
+
+obj_t* read_file(const char* filename)
+{
+    FILE* fp = fopen(filename, "r");
+    if (!fp)
+        return make_nil();
+    
+	fseek(fp, 0, SEEK_END);
+	int file_size = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	char* str = (char*)malloc(file_size + 1);
+	int bytes_read = (int)fread(str, sizeof(char), file_size, fp);
+	assert(file_size == bytes_read);
+	fclose(fp);
+	str[file_size] = 0;  // make sure it's null terminated.
+    const char* p = str;
+    obj_t* result = parse_expr_sequence(&p);
+    free(str);
+    return result;
 }
