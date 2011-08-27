@@ -6,37 +6,25 @@ Monkeys love bananas, parenthesis, not so much.
 TODO
 -----------
 
+* sequence
+* eval bootstrap.ooo
 * first class envs - eval and apply should take env argument, make-env
 * recursive def
 
-Bootstrap
--------------
-
-Let's start writing lisp code in lisp.
-Instead of all these c functions. Yuk.
-
-What is the minimal set of prims that we need?
-
-Memory
----------------
-
-All nodes should come from a pool.  Some kind of memory reporting stats.
-All objs should be ref-counted.
-All prims should manange this stuff. so that "hopefully" all lisp code will too.
+Code Review
+----------------
+* What is the minimal set of prims that we need?
+* should we try kernal style $vau?
 
 Exceptions
 ----------------
-
 Make this work. somehow. setjmp, longjmp?
 
 Immediate values
 -------------------
-
 Is there some hacky way to use doubles or floats as immediate values?  Nans?
-Hmm, should I have an actual true value?
 
 Macros
 -------------------
-
 These are nice to play with.
 
