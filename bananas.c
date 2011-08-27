@@ -10,7 +10,7 @@
 int run_test(const char* input, obj_t* expected)
 {
     obj_t* result = prim_eval(read(input));
-    if (!equal(result, expected)) {
+    if (!is_equal(result, expected)) {
         fprintf(stderr, "FAILED: evaluating \"%s\"\n", input);
         fprintf(stderr, "    expected = \n");
         fprintf(stderr, "        ");
@@ -78,23 +78,23 @@ int main(int argc, char* argv[])
 
     char* line = 0;
     while (1) {
+
+        printf("objs ( %d / %d )\n", g_num_used_objs, g_num_free_objs);
+
         line = readline("\\O_o/ > ");
         if (strcmp(line, "quit") == 0)
             return 0;
         if (line && *line)
             add_history(line);
         obj_t* n = read(line);
-
-        /*
-        printf("read_string = \n    ");
-        dump(n, 0);
-        printf("\n");
-        */
-
+        ref(n);
         free(line);
         obj_t* r = prim_eval(n);
-        printf("/o_O\\ => ");
+        ref(r);
+        unref(n);
+        printf(" => ");
         dump(r, 0);
         printf("\n");
+        unref(r);
     }
 }

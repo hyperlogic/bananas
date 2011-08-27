@@ -7,6 +7,7 @@ void prim_init();
 
 // type predicates
 obj_t* prim_is_nil(obj_t* obj);
+obj_t* prim_is_true(obj_t* obj);
 obj_t* prim_is_symbol(obj_t* obj);
 obj_t* prim_is_number(obj_t* obj);
 obj_t* prim_is_pair(obj_t* obj);

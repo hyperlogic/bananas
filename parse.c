@@ -87,7 +87,6 @@ obj_t* parse_expr(const char** pp);
 
 obj_t* parse_list(const char** pp)
 {
-
     // LPAREN ( RPAREN | EXPR+ (PERIOD EXPR)? RPAREN )
 
     // LPAREN 
@@ -97,7 +96,7 @@ obj_t* parse_list(const char** pp)
         ADVANCE();
 
     if (PEEK(0) == ')')
-        return cons(0, 0);  // empty list
+        return cons(make_nil(), make_nil());  // empty list
     else {
         // EXPR+
         obj_t* root = make_nil();
@@ -105,11 +104,11 @@ obj_t* parse_list(const char** pp)
         do {
             obj_t* obj = parse_expr(pp);
             if (is_nil(pair)) {
-                root = cons(obj, 0);
+                root = cons(obj, make_nil());
                 pair = root;
             } else {
                 obj_t* temp = pair;
-                pair = cons(obj, 0);
+                pair = cons(obj, make_nil());
                 set_cdr(temp, pair);
             }
 

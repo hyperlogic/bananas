@@ -3,8 +3,6 @@
 
 #include "obj.h"
 
-void init();
-
 obj_t* read(const char* str);
 
 #endif
