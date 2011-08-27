@@ -7,9 +7,9 @@
 #include "prim.h"
 
 // return 1 on failure
-int run_test(const char* input, obj_t* expected)
+int run_test(const char* input, obj_t* expected, obj_t* env)
 {
-    obj_t* result = eval(read(input), g_env);
+    obj_t* result = eval(read(input), env);
     if (!is_equal(result, expected)) {
         fprintf(stderr, "FAILED: evaluating \"%s\"\n", input);
         fprintf(stderr, "    expected = \n");
@@ -47,10 +47,22 @@ void test_suite()
         {TEST, "'(1 . 2)", cons(make_number(1), make_number(2))},
         {EVAL, "(def ten nil)"},
         {EVAL, "(def plus-ten nil)"},
+
+        // env & eval test
+        {EVAL, "(def attic (make-env (curr-env)))"},
+        {EVAL, "(eval '(def xxx 10) attic)"},
+        {TEST, "xxx", make_nil()},
+        {TEST, "(eval 'xxx attic)", make_number(10)},
+
+        // rec
         //{EVAL, "(def factorial (lambda (n) (if (eq? n 0) 1 (* n (factorial (- n 1))))))"},
         //{TEST, "(factorial 0)", make_number(1)},
         {END, NULL, NULL}
     };
+
+    // make a temp env, so we dont pollute the global scope.
+    obj_t* test_env = make_env(make_nil(), g_env);
+    ref(test_env);
 
     int num_tests = 0;
     int num_fails = 0;
@@ -58,9 +70,9 @@ void test_suite()
     while (test->type != END) {
         if (test->type == TEST) {
             num_tests++;
-            num_fails += run_test(test->string, test->expected);
+            num_fails += run_test(test->string, test->expected, test_env);
         } else if (test->type == EVAL) {
-            eval(read(test->string), g_env);
+            eval(read(test->string), test_env);
         }
         test++;
     }
@@ -68,6 +80,7 @@ void test_suite()
     if (num_fails > 0) {
         fprintf(stderr, "( %d / %d ) tests failed!\n", num_fails, num_tests);
     }
+    unref(test_env);
 }
 
 int main(int argc, char* argv[])
@@ -75,6 +88,8 @@ int main(int argc, char* argv[])
     init();
 
     test_suite();
+    obj_t* repl_env = make_env(make_nil(), g_env);
+    ref(repl_env);
 
     char* line = 0;
     while (1) {
@@ -83,13 +98,16 @@ int main(int argc, char* argv[])
 
         line = readline("\\O_o/ > ");
         if (strcmp(line, "quit") == 0)
-            return 0;
+        {
+            free(line);
+            break;
+        }
         if (line && *line)
             add_history(line);
         obj_t* n = read(line);
         ref(n);
         free(line);
-        obj_t* r = eval(n, g_env);
+        obj_t* r = eval(n, repl_env);
         ref(r);
         unref(n);
         printf("  ");
@@ -97,4 +115,7 @@ int main(int argc, char* argv[])
         printf("\n");
         unref(r);
     }
+    unref(repl_env);
+
+    return 0;
 }

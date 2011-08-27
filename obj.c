@@ -438,8 +438,11 @@ obj_t* def(obj_t* symbol, obj_t* value, obj_t* env)
             set_cdr(car(plist), value);
         else 
             set_cdr(prev, cons(cons(symbol, value), make_nil()));
-    } else
-        env->data.env.plist = cons(cons(symbol, value), make_nil());
+    } else {
+        obj_t* new_plist = cons(cons(symbol, value), make_nil());
+        ref(new_plist);
+        env->data.env.plist = new_plist;
+    }
 
     return value;
 }
@@ -566,6 +569,9 @@ void dump(obj_t* obj, int to_stderr)
         case CLOSURE_OBJ:
             PRINTF("#<closure 0x%p>", obj);
             break;
+        case ENV_OBJ:
+            PRINTF("#<env 0x%p>", obj);
+            break;
         default:
             PRINTF("???");
             break;
@@ -581,6 +587,7 @@ void init()
 {
     pool_init();
     g_env = make_env(make_nil(), make_nil());
+    ref(g_env);
     prim_init();
     
     // boot strap

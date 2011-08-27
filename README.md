@@ -44,6 +44,8 @@ Kernel Notes
 * copy-es-immutable - uh... 
 * environment? - env?
 * ignore? - #ignore is a type, different from #inert. Skip it.
-* eval - need environment...
+* evals - take an environment.
+* make-env - create an env with an optional parent env
+* curr-env - returns the current env scope.
 
 

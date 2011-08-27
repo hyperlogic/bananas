@@ -25,6 +25,8 @@ obj_t* prim_set_car(obj_t* obj, obj_t* env);
 obj_t* prim_set_cdr(obj_t* obj, obj_t* env);
 
 // env stuff
+obj_t* prim_curr_env(obj_t* obj, obj_t* env);
+obj_t* prim_make_env(obj_t* obj, obj_t* env);
 obj_t* prim_def(obj_t* obj, obj_t* env);
 obj_t* prim_defined(obj_t* obj, obj_t* env);
 

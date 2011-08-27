@@ -31,6 +31,8 @@ static prim_info_t s_prim_infos[] = {
     {"set-cdr!", prim_set_cdr},
 
     // env stuff
+    {"curr-env", prim_curr_env},
+    {"make-env", prim_make_env},
     {"def", prim_def},
     {"defined?", prim_defined},
 
@@ -97,8 +99,8 @@ obj_t* prim_##name(obj_t* obj, obj_t* env)                  \
     obj_t* b = eval(cadr(obj), env);                        \
     ref(b);                                                 \
     obj_t* result = name(a, b);                             \
-    unref(a);                                               \
     unref(b);                                               \
+    unref(a);                                               \
     return result;                                          \
 }
 
@@ -126,6 +128,23 @@ WRAP_FEXPR2(set_cdr)
 //
 // env stuff
 //
+obj_t* prim_curr_env(obj_t* obj, obj_t* env)
+{
+    return env;
+}
+
+obj_t* prim_make_env(obj_t* obj, obj_t* env)
+{
+    obj_t* parent;
+    if (is_nil(obj))
+        parent = make_nil();
+    else
+        parent = eval(car(obj), env);
+    ref(parent);
+    obj_t* result = make_env(make_nil(), parent);
+    unref(parent);
+    return result;
+}
 
 obj_t* prim_def(obj_t* obj, obj_t* env)
 {
@@ -192,11 +211,21 @@ obj_t* prim_quote(obj_t* obj, obj_t* env)
 
 obj_t* prim_eval(obj_t* obj, obj_t* env)
 {
-    obj_t* args = car(obj);
-    if (!is_nil(cdr(obj)))
-        return eval(args, cadr(obj));
-    else
-        return eval(args, env);
+    obj_t* expr = eval(car(obj), env);
+    ref(expr);
+    if (is_pair(cdr(obj))) {
+        obj_t* env_arg = eval(cadr(obj), env);
+        ref(env_arg);
+        obj_t* result = eval(expr, env_arg);
+        unref(env_arg);
+        unref(expr);
+        return result;
+    }
+    else {
+        obj_t* result = eval(expr, env);
+        unref(expr);
+        return result;
+    }
 }
 
 obj_t* prim_apply(obj_t* obj, obj_t* env)
