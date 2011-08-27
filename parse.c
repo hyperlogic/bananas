@@ -35,6 +35,13 @@ obj_t* parse_symbol(const char** pp)
             ADVANCE();
     }
 
+    // #t support.
+    if (*start == '#') {
+        int len = *pp - start;
+        if (len == 2 && start[1] == 't')
+            return make_true();
+    }
+    
     return make_symbol2(start, *pp);
 }
 
