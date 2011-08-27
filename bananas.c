@@ -9,7 +9,7 @@
 // return 1 on failure
 int run_test(const char* input, obj_t* expected)
 {
-    obj_t* result = prim_eval(read(input));
+    obj_t* result = eval(read(input), g_env);
     if (!is_equal(result, expected)) {
         fprintf(stderr, "FAILED: evaluating \"%s\"\n", input);
         fprintf(stderr, "    expected = \n");
@@ -60,7 +60,7 @@ void test_suite()
             num_tests++;
             num_fails += run_test(test->string, test->expected);
         } else if (test->type == EVAL) {
-            prim_eval(read(test->string));
+            eval(read(test->string), g_env);
         }
         test++;
     }
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
     char* line = 0;
     while (1) {
 
-        printf("  %d used objs\n", g_num_used_objs, g_num_free_objs);
+        printf("  %d used objs\n", g_num_used_objs);
 
         line = readline("\\O_o/ > ");
         if (strcmp(line, "quit") == 0)
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
         obj_t* n = read(line);
         ref(n);
         free(line);
-        obj_t* r = prim_eval(n);
+        obj_t* r = eval(n, g_env);
         ref(r);
         unref(n);
         printf("  ");

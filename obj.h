@@ -19,7 +19,7 @@ typedef struct env_struct {
     struct obj_struct* parent;
 } env_t;
 
-typedef struct obj_struct* (*prim_t)(struct obj_struct* args);
+typedef struct obj_struct* (*prim_t)(struct obj_struct* args, struct obj_struct* env);
 
 enum obj_type { SYMBOL_OBJ = 0, PAIR_OBJ, NUMBER_OBJ, PRIM_OBJ, CLOSURE_OBJ, ENV_OBJ };
 
@@ -95,6 +95,8 @@ obj_t* defined(obj_t* symbol, obj_t* env);  // NOTE: this returns value not #t
 
 // special forms
 obj_t* quote(obj_t* obj);
+obj_t* eval(obj_t* obj, obj_t* env);
+obj_t* apply(obj_t* obj, obj_t* env);
 
 // debug output
 void dump(obj_t* n, int to_stderr);

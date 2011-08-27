@@ -70,9 +70,9 @@ void prim_init()
 // TODO: this is suspisiously like wraping a $vau, let's do that instead.
 
 #define WRAP_BOOL_FEXPR1(name)                              \
-obj_t* prim_##name(obj_t* obj)                              \
+obj_t* prim_##name(obj_t* obj, obj_t* env)                  \
 {                                                           \
-    obj_t* a = prim_eval(car(obj));                         \
+    obj_t* a = eval(car(obj), env);                         \
     ref(a);                                                 \
     obj_t* result = name(a) ? make_true() : make_nil();     \
     unref(a);                                               \
@@ -80,9 +80,9 @@ obj_t* prim_##name(obj_t* obj)                              \
 }
 
 #define WRAP_FEXPR1(name)                                   \
-obj_t* prim_##name(obj_t* obj)                              \
+obj_t* prim_##name(obj_t* obj, obj_t* env)                  \
 {                                                           \
-    obj_t* a = prim_eval(car(obj));                         \
+    obj_t* a = eval(car(obj), env);                         \
     ref(a);                                                 \
     obj_t* result = name(a);                                \
     unref(a);                                               \
@@ -90,11 +90,11 @@ obj_t* prim_##name(obj_t* obj)                              \
 }
 
 #define WRAP_FEXPR2(name)                                   \
-obj_t* prim_##name(obj_t* obj)                              \
+obj_t* prim_##name(obj_t* obj, obj_t* env)                  \
 {                                                           \
-    obj_t* a = prim_eval(car(obj));                         \
+    obj_t* a = eval(car(obj), env);                         \
     ref(a);                                                 \
-    obj_t* b = prim_eval(cadr(obj));                        \
+    obj_t* b = eval(cadr(obj), env);                        \
     ref(b);                                                 \
     obj_t* result = name(a, b);                             \
     unref(a);                                               \
@@ -127,21 +127,21 @@ WRAP_FEXPR2(set_cdr)
 // env stuff
 //
 
-obj_t* prim_def(obj_t* obj)
+obj_t* prim_def(obj_t* obj, obj_t* env)
 {
     obj_t* symbol = car(obj);
-    obj_t* value = prim_eval(cadr(obj));
+    obj_t* value = eval(cadr(obj), env);
     ref(value);
-    obj_t* result = def(symbol, value, g_env);
+    obj_t* result = def(symbol, value, env);
     unref(value);
     return result;
 }
 
-obj_t* prim_defined(obj_t* obj)
+obj_t* prim_defined(obj_t* obj, obj_t* env)
 {
-    obj_t* symbol = prim_eval(car(obj));
+    obj_t* symbol = eval(car(obj), env);
     ref(symbol);
-    obj_t* result = defined(symbol, g_env);
+    obj_t* result = defined(symbol, env);
     unref(symbol);
     return result;
 }
@@ -158,12 +158,12 @@ WRAP_FEXPR2(is_equal)
 //
 
 #define MATH_PRIM(name, op)                     \
-obj_t* prim_##name(obj_t* obj)                  \
+obj_t* prim_##name(obj_t* obj, obj_t* env)      \
 {                                               \
     obj_t* root = obj;                          \
     double accum;                               \
     do {                                        \
-        obj_t* arg = prim_eval(car(obj));       \
+        obj_t* arg = eval(car(obj), env);       \
         ref(arg);                               \
         assert(is_number(arg));                 \
         if (obj == root)                        \
@@ -185,95 +185,66 @@ MATH_PRIM(div, /=)
 // special forms
 //
 
-obj_t* prim_quote(obj_t* obj)
+obj_t* prim_quote(obj_t* obj, obj_t* env)
 {
     return car(obj);
 }
 
-obj_t* prim_eval(obj_t* obj)
+obj_t* prim_eval(obj_t* obj, obj_t* env)
 {
-    if (is_symbol(obj))
-        return defined(obj, g_env);
-    else if (is_pair(obj))
-        return prim_apply(obj);
+    obj_t* args = car(obj);
+    if (!is_nil(cdr(obj)))
+        return eval(args, cadr(obj));
     else
-        return obj;
+        return eval(args, env);
 }
 
-obj_t* prim_apply(obj_t* obj)
+obj_t* prim_apply(obj_t* obj, obj_t* env)
 {
-    assert(is_pair(obj));
-    obj_t* f = prim_eval(car(obj));
-    ref(f);
-    obj_t* args = cdr(obj);
-    assert(!is_immediate(f));
-    obj_t* result;
-    switch (f->type) {
-    case PRIM_OBJ:
-        result = f->data.prim(args);
-        break;
-    case CLOSURE_OBJ:
-    {
-        obj_t* local_env = make_env(make_nil(), f->data.closure.env);
-        obj_t* closure_args = f->data.closure.args;
-        while(!is_nil(args) && !is_nil(closure_args)) {
-            def(car(closure_args), prim_eval(car(args)), local_env);
-            args = cdr(args);
-            closure_args = cdr(closure_args);
-        }
-        obj_t* closure_body = f->data.closure.body;
-
-        // TODO: eval should take an env argument.
-        // make sure to eval closure body with the local_env
-        obj_t* orig_env = g_env;
-        g_env = local_env;
-        result = prim_eval(closure_body);
-        g_env = orig_env;
-        break;
-    }
-    default:
-        assert(0);  // illegal function type
-    }
-
-    unref(f);
-    return result;
+    obj_t* args = car(obj);
+    if (!is_nil(cdr(obj)))
+        return apply(args, cadr(obj));
+    else
+        return apply(args, env);
 }
 
-static void capture_closure(obj_t* env, obj_t* args, obj_t* body)
+static void capture_closure(obj_t* local_env, obj_t* static_env, obj_t* args, obj_t* body)
 {
     if (is_nil(body))
         return;
 
     if (body->type == SYMBOL_OBJ && is_nil(member(body, args))) {
-        def(body, prim_eval(body), env);
+        def(body, eval(body, static_env), local_env);
     } else if (body->type == PAIR_OBJ) {
-        capture_closure(env, args, car(body));
-        capture_closure(env, args, cdr(body));
+        capture_closure(local_env, static_env, args, car(body));
+        capture_closure(local_env, static_env, args, cdr(body));
     }
 }
 
-obj_t* prim_lambda(obj_t* n)
+obj_t* prim_lambda(obj_t* n, obj_t* env)
 {
     obj_t* args = car(n);
     obj_t* body = cadr(n);
-    obj_t* env = make_env(make_nil(), make_nil());
+    obj_t* local_env = make_env(make_nil(), make_nil());
 
-    capture_closure(env, args, body);
+    // evaluates symbols in the body using the static_env.
+    // these values are then captured in the local_env.
+    capture_closure(local_env, env, args, body);
 
-    return make_closure(args, body, env);
+    return make_closure(args, body, local_env);
 }
 
-obj_t* prim_if(obj_t* obj)
+obj_t* prim_if(obj_t* obj, obj_t* env)
 {
-    obj_t* expr = prim_eval(car(obj));
+    obj_t* expr = eval(car(obj), env);
     ref(expr);
     obj_t* true_body = car(cdr(obj));
     obj_t* else_body = car(cdr(cdr(obj)));
     obj_t* result;
     if (!is_nil(expr))
-        result = prim_eval(true_body);
+        result = eval(true_body, env);
     else if (!is_nil(else_body))
-        result = prim_eval(else_body);
+        result = eval(else_body, env);
     else
         result = make_nil();
     unref(expr);

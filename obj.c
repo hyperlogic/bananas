@@ -471,6 +471,53 @@ obj_t* quote(obj_t* obj)
     return list2(make_symbol("quote"), obj);
 }
 
+obj_t* eval(obj_t* obj, obj_t* env)
+{
+    assert(obj);
+    assert(is_env(env));
+    if (is_symbol(obj))
+        return defined(obj, env);
+    else if (is_pair(obj))
+        return apply(obj, env);
+    else
+        return obj;
+}
+
+obj_t* apply(obj_t* obj, obj_t* env)
+{
+    assert(is_pair(obj));
+    obj_t* f = eval(car(obj), env);
+    ref(f);
+    obj_t* args = cdr(obj);
+    assert(!is_immediate(f));
+    obj_t* result;
+    switch (f->type) {
+    case PRIM_OBJ:
+        result = f->data.prim(args, env);
+        break;
+    case CLOSURE_OBJ:
+    {
+        obj_t* local_env = make_env(make_nil(), f->data.closure.env);
+        obj_t* closure_args = f->data.closure.args;
+        while(!is_nil(args) && !is_nil(closure_args)) {
+            def(car(closure_args), eval(car(args), env), local_env);
+            args = cdr(args);
+            closure_args = cdr(closure_args);
+        }
+        obj_t* closure_body = f->data.closure.body;
+
+        // make sure to eval closure body with the local_env
+        result = eval(closure_body, local_env);
+        break;
+    }
+    default:
+        assert(0);  // illegal function type
+    }
+
+    unref(f);
+    return result;
+}
+
 //
 // debug output
 //

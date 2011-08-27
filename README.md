@@ -8,7 +8,6 @@ TODO
 
 * sequence
 * eval bootstrap.ooo
-* first class envs - eval and apply should take env argument, make-env
 * recursive def
 
 Code Review
