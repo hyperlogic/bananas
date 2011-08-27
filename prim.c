@@ -27,6 +27,8 @@ static prim_info_t s_prim_infos[] = {
     {"cdr", prim_cdr},
     {"cadr", prim_cadr},
     {"assoc", prim_assoc},
+    {"set-car!", prim_set_car},
+    {"set-cdr!", prim_set_cdr},
 
     // env stuff
     {"def", prim_def},
@@ -118,6 +120,8 @@ WRAP_FEXPR1(car)
 WRAP_FEXPR1(cdr)
 WRAP_FEXPR1(cadr)
 WRAP_FEXPR2(assoc)
+WRAP_FEXPR2(set_car)
+WRAP_FEXPR2(set_cdr)
 
 //
 // env stuff

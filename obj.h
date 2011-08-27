@@ -80,8 +80,8 @@ obj_t* cadr(obj_t* obj);
 obj_t* list1(obj_t* a);
 obj_t* list2(obj_t* a, obj_t* b);
 obj_t* list3(obj_t* a, obj_t* b, obj_t* c);
-void set_car(obj_t* obj, obj_t* value);
-void set_cdr(obj_t* obj, obj_t* value);
+obj_t* set_car(obj_t* obj, obj_t* value);
+obj_t* set_cdr(obj_t* obj, obj_t* value);
 obj_t* member(obj_t* obj, obj_t* lst);
 obj_t* assoc(obj_t* obj, obj_t* plist);
 

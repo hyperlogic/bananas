@@ -337,20 +337,22 @@ obj_t* list3(obj_t* a, obj_t* b, obj_t* c)
     return cons(a, cons(b, cons(c, make_nil())));
 }
 
-void set_car(obj_t* obj, obj_t* value)
+obj_t* set_car(obj_t* obj, obj_t* value)
 {
     assert(is_pair(obj));
     ref(value);
     unref(obj->data.pair.car);
     obj->data.pair.car = value;
+    return make_nil();
 }
 
-void set_cdr(obj_t* obj, obj_t* value)
+obj_t* set_cdr(obj_t* obj, obj_t* value)
 {
     assert(is_pair(obj));
     ref(value);
     unref(obj->data.pair.cdr);
     obj->data.pair.cdr = value;
+    return make_nil();
 }
 
 obj_t* member(obj_t* obj, obj_t* lst)
