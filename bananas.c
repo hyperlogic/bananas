@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
     char* line = 0;
     while (1) {
 
-        printf("objs ( %d / %d )\n", g_num_used_objs, g_num_free_objs);
+        printf("  %d used objs\n", g_num_used_objs, g_num_free_objs);
 
         line = readline("\\O_o/ > ");
         if (strcmp(line, "quit") == 0)
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
         obj_t* r = prim_eval(n);
         ref(r);
         unref(n);
-        printf(" => ");
+        printf("  ");
         dump(r, 0);
         printf("\n");
         unref(r);

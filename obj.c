@@ -484,42 +484,41 @@ obj_t* quote(obj_t* obj)
 void dump(obj_t* obj, int to_stderr)
 {
     if (is_nil(obj))
-        PRINTF(" nil");
+        PRINTF("nil");
     else if (is_true(obj))
-        PRINTF(" #t");
+        PRINTF("#t");
     else {
         assert(!is_immediate(obj));
         switch (obj->type) {
         case NUMBER_OBJ:
-            PRINTF(" %f", obj->data.number);
+            PRINTF("%f", obj->data.number);
             break;
         case SYMBOL_OBJ:
-            PRINTF(" %s", symbol_get(obj->data.symbol));
+            PRINTF("%s", symbol_get(obj->data.symbol));
             break;
         case PAIR_OBJ:
-            PRINTF(" (");
+            PRINTF("(");
             while (!is_nil(obj)) {
                 dump(car(obj), to_stderr);
                 obj = cdr(obj);
                 if (!is_nil(obj) && !is_pair(obj)) {
-                    PRINTF(" .");
+                    PRINTF(" . ");
                     dump(obj, to_stderr);
                     break;
                 }
+                if (!is_nil(obj))
+                    PRINTF(" ");
             }
-            PRINTF(" )");
+            PRINTF(")");
             break;
         case PRIM_OBJ:
-            PRINTF(" <#prim 0x%p>", obj->data.prim);
+            PRINTF("#<prim 0x%p>", obj->data.prim);
             break;
         case CLOSURE_OBJ:
-            PRINTF(" <#closure ");
-            dump(obj->data.closure.args, to_stderr);
-            dump(obj->data.closure.body, to_stderr);
-            PRINTF(" >");
+            PRINTF("#<closure 0x%p>", obj);
             break;
         default:
-            PRINTF(" ???");
+            PRINTF("???");
             break;
         }
     }
