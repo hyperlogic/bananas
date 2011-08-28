@@ -71,7 +71,7 @@ obj_t* make_symbol2(const char* start, const char* end);
 obj_t* make_number(double num);
 obj_t* make_number2(const char* start, const char* end);
 obj_t* make_pair(obj_t* car, obj_t* cdr);
-obj_t* make_env(obj_t* plist, obj_t* parent);
+obj_t* make_environment(obj_t* plist, obj_t* parent);
 obj_t* make_prim(prim_t prim);
 obj_t* make_closure(obj_t* args, obj_t* body, obj_t* env);
 obj_t* make_applicative(obj_t* operative);

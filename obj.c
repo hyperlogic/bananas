@@ -196,7 +196,7 @@ obj_t* make_pair(obj_t* car, obj_t* cdr)
     return obj;
 }
 
-obj_t* make_env(obj_t* plist, obj_t* parent)
+obj_t* make_environment(obj_t* plist, obj_t* parent)
 {
     ref(plist);
     ref(parent);
@@ -621,7 +621,7 @@ void init()
     assert(sizeof(obj_t) == 64);
 
     pool_init();
-    g_env = make_env(KNULL, KNULL);
+    g_env = make_environment(KNULL, KNULL);
     ref(g_env);
     prim_init();
     

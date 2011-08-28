@@ -31,6 +31,8 @@ static prim_info_t s_prim_infos[] = {
     {"cons", $cons, 1},
     {"set-car!", $set_car, 1},
     {"set-cdr!", $set_cdr, 1},
+    {"make-environment", $make_environment, 1},
+    {"$vau", $vau, 0},
 
     {"", NULL}
 };
@@ -214,6 +216,24 @@ obj_t* $set_cdr(obj_t* obj, obj_t* env)
 {
     set_cdr(car(obj), car(cdr(obj)));
     return KINERT;
+}
+
+obj_t* $make_environment(obj_t* obj, obj_t* env)
+{
+    obj_t* parent;
+    if (is_null(obj))
+        parent = KNULL;
+    else
+        parent = car(obj);
+    ref(parent);
+    obj_t* result = make_environment(KNULL, parent);
+    unref(parent);
+    return result;
+}
+
+obj_t* $vau(obj_t* obj, obj_t* env)
+{
+
 }
 
 /*

@@ -41,26 +41,24 @@ Immediate Values
 Core types and primitive features
 ------------------------------------
 * boolean? - #t and #f
-* ignore? - #ignore
-* inert? - #inert
-* symbol?
-* pair?
-* null?
-* environment?
-* applicative?
-* operative?
-* $define!
-* eval
 * eq?
 * equal? - I'm gonna skip the cycle handling part, tho.
+* symbol?
+* inert? - #inert
 * $if
-* TODO: copy-es-immutable - lets see how far I can get without this...
+* pair?
+* null?
 * cons
 * set-car!
 * set-cdr!
-* TODO: environment?
-* TODO: make-env - create an env with an optional parent env
-
+* TODO: copy-es-immutable - lets see how far I can get without this...
+* environment?
+* ignore? - #ignore
+* eval
+* make-environement - my environments only have one parent, and they chain.
+* $define!
+* operative?
+* applicative?
 * TODO: $vau
 * TODO: wrap
 * TODO: unwrap

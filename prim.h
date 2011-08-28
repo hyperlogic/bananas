@@ -26,6 +26,8 @@ obj_t* $if(obj_t* obj, obj_t* env);
 obj_t* $cons(obj_t* obj, obj_t* env);
 obj_t* $set_car(obj_t* obj, obj_t* env);
 obj_t* $set_cdr(obj_t* obj, obj_t* env);
+obj_t* $make_environment(obj_t* obj, obj_t* env);
+obj_t* $vau(obj_t* obj, obj_t* env);
 
 // pair stuff
 /*

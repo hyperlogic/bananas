@@ -62,7 +62,7 @@ void test_suite()
     };
 
     // make a temp env, so we dont pollute the global scope.
-    obj_t* test_env = make_env(make_nil(), g_env);
+    obj_t* test_env = make_environment(make_nil(), g_env);
     ref(test_env);
 
     int num_tests = 0;
@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
     test_suite();
 #endif
 
-    obj_t* repl_env = make_env(KNULL, g_env);
+    obj_t* repl_env = make_environment(KNULL, g_env);
     ref(repl_env);
 
     char* line = 0;
