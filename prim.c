@@ -12,8 +12,10 @@ typedef struct {
 static prim_info_t s_prim_infos[] = {
 
     // type predicates
-    {"nil?", prim_is_nil}, 
-    {"true?", prim_is_true}, 
+    {"inert?", prim_is_inert}, 
+    {"ignore?", prim_is_ignore}, 
+    {"boolean?", prim_is_boolean}, 
+    {"null?", prim_is_null}, 
     {"symbol?", prim_is_symbol}, 
     {"number?", prim_is_number}, 
     {"pair?", prim_is_pair}, 
@@ -21,6 +23,9 @@ static prim_info_t s_prim_infos[] = {
     {"closure?", prim_is_closure}, 
     {"env?", prim_is_env}, 
 
+    {"$define!", prim_$define}, 
+
+    /*
     // pair stuff
     {"cons", prim_cons},
     {"car", prim_car},
@@ -52,6 +57,8 @@ static prim_info_t s_prim_infos[] = {
     {"apply", prim_apply}, 
     {"lambda", prim_lambda},
     {"if", prim_if},
+    */
+
     {"", NULL}
 };
 
@@ -60,7 +67,7 @@ void prim_init()
     // register prims
     prim_info_t* p = s_prim_infos;
     while (p->prim) {
-        def(make_symbol(p->name), make_prim(p->prim), g_env);
+        prim_$define(cons(make_symbol(p->name), cons(make_prim(p->prim), KNULL)), g_env);
         p++;
     }
 }
@@ -69,14 +76,12 @@ void prim_init()
 // type predicates
 //
 
-// TODO: this is suspisiously like wraping a $vau, let's do that instead.
-
 #define WRAP_BOOL_FEXPR1(name)                              \
 obj_t* prim_##name(obj_t* obj, obj_t* env)                  \
 {                                                           \
     obj_t* a = eval(car(obj), env);                         \
     ref(a);                                                 \
-    obj_t* result = name(a) ? make_true() : make_nil();     \
+    obj_t* result = name(a) ? KTRUE : KFALSE;               \
     unref(a);                                               \
     return result;                                          \
 }
@@ -104,8 +109,10 @@ obj_t* prim_##name(obj_t* obj, obj_t* env)                  \
     return result;                                          \
 }
 
-WRAP_BOOL_FEXPR1(is_nil)
-WRAP_BOOL_FEXPR1(is_true)
+WRAP_BOOL_FEXPR1(is_inert)
+WRAP_BOOL_FEXPR1(is_ignore)
+WRAP_BOOL_FEXPR1(is_boolean)
+WRAP_BOOL_FEXPR1(is_null)
 WRAP_BOOL_FEXPR1(is_symbol)
 WRAP_BOOL_FEXPR1(is_number)
 WRAP_BOOL_FEXPR1(is_pair)
@@ -113,6 +120,13 @@ WRAP_BOOL_FEXPR1(is_prim)
 WRAP_BOOL_FEXPR1(is_closure)
 WRAP_BOOL_FEXPR1(is_env)
 
+obj_t* prim_$define(obj_t* obj, obj_t* env)
+{
+    // TODO!
+    return KNULL;
+}
+
+/*
 //
 // pair stuff
 //
@@ -279,3 +293,4 @@ obj_t* prim_if(obj_t* obj, obj_t* env)
     unref(expr);
     return result;
 }
+*/

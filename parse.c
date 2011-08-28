@@ -35,11 +35,17 @@ obj_t* parse_symbol(const char** pp)
             ADVANCE();
     }
 
-    // #t support.
+    // # values
     if (*start == '#') {
         int len = *pp - start;
         if (len == 2 && start[1] == 't')
-            return make_true();
+            return KTRUE;
+        else if (len == 2 && start[1] == 'f')
+            return KFALSE;
+        else if (len == 6 && strncmp(start + 1, "inert", len - 1) == 0)
+            return KINERT;
+        else if (len == 7 && strncmp(start + 1, "ignore", len - 1) == 0)
+            return KIGNORE;
     }
     
     return make_symbol2(start, *pp);
@@ -103,19 +109,19 @@ obj_t* parse_list(const char** pp)
         ADVANCE();
 
     if (PEEK(0) == ')')
-        return cons(make_nil(), make_nil());  // empty list
+        return KNULL;  // empty list
     else {
         // EXPR+
-        obj_t* root = make_nil();
-        obj_t* pair = make_nil();
+        obj_t* root = KNULL;
+        obj_t* pair = KNULL;
         do {
             obj_t* obj = parse_expr(pp);
-            if (is_nil(pair)) {
-                root = cons(obj, make_nil());
+            if (is_null(pair)) {
+                root = cons(obj, KNULL);
                 pair = root;
             } else {
                 obj_t* temp = pair;
-                pair = cons(obj, make_nil());
+                pair = cons(obj, KNULL);
                 set_cdr(temp, pair);
             }
 
@@ -179,14 +185,14 @@ obj_t* parse_expr(const char** pp)
 obj_t* parse_expr_sequence(const char** pp)
 {
     // EXPR*
-    obj_t* root = cons(make_symbol("sequence"), make_nil());
+    obj_t* root = cons(make_symbol("sequence"), KNULL);
     obj_t* pair = root;
     while(1) {
         while (isspace(PEEK(0)))
             ADVANCE();
         if (PEEK(0) == 0)
             break;
-        set_cdr(pair, cons(parse_expr(pp), make_nil()));
+        set_cdr(pair, cons(parse_expr(pp), KNULL));
         pair = cdr(pair);
     }
     return root;
@@ -201,7 +207,7 @@ obj_t* read_file(const char* filename)
 {
     FILE* fp = fopen(filename, "r");
     if (!fp)
-        return make_nil();
+        return KNULL;
     
 	fseek(fp, 0, SEEK_END);
 	int file_size = ftell(fp);

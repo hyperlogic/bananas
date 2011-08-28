@@ -28,22 +28,34 @@ Macros
 These are nice to play with.
 
 Kernel Notes
+====================
+
+Immediate Values
 --------------------
-* boolean? - #t and #f, I'm just gonna skip this...
-* eq? - pretty much like mine.
-* equal? - needs to handle cycles, I'm just gonna skip this too.
+* #t
+* #f
+* #inert
+* #ignore 
+
+Type predicates
+---------------------
+* boolean? - #t and #f
+* ignore? - #ignore
+* inert? - #inert
 * symbol?
-* #inert - wtf? - i guess i'll use nil
-* inert? - uh, lets use nil?
-* $if - sweet, lets just use if.
-* pair? - got it
-* null? - hmm, nil? instead?
+* pair?
+* null?
+
+* eq?
+* equal? - needs to handle cycles, I'm just gonna skip this too.
+
+* $if
+
 * cons - got it.
 * set-car! - DONE, return nil, instead of #inert
 * set-cdr! - DONE, return nil, instead of #inert
 * copy-es-immutable - uh... 
 * environment? - env?
-* ignore? - #ignore is a type, different from #inert. Skip it.
 * eval - take an environment argument.
 * make-env - create an env with an optional parent env
 * $define! - in kernel, the first argument is a "formal-parameter-tree"....

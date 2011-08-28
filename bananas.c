@@ -6,6 +6,7 @@
 #include "parse.h"
 #include "prim.h"
 
+#ifndef KERNEL
 // return 1 on failure
 int run_test(const char* input, obj_t* expected, obj_t* env)
 {
@@ -82,13 +83,17 @@ void test_suite()
     }
     unref(test_env);
 }
+#endif
 
 int main(int argc, char* argv[])
 {
     init();
 
+#ifndef KERNEL
     test_suite();
-    obj_t* repl_env = make_env(make_nil(), g_env);
+#endif
+
+    obj_t* repl_env = make_env(KNULL, g_env);
     ref(repl_env);
 
     char* line = 0;

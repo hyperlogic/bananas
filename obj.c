@@ -8,8 +8,8 @@
 #include <stdio.h>
 
 // static object pool
-#define MAX_OBJS 10000
-obj_t g_obj_pool[MAX_OBJS];
+#define MAX_OBJS 8192
+obj_t g_obj_pool[MAX_OBJS];  // 512 k
 
 // free list
 obj_t* g_free_objs = NULL;
@@ -21,6 +21,9 @@ int g_num_used_objs = 0;
 
 // root environment
 obj_t* g_env = NULL;
+
+static obj_t* env_lookup(obj_t* symbol, obj_t* env);
+static obj_t* assq(obj_t* key, obj_t* plist);
 
 //
 // obj pool
@@ -130,16 +133,6 @@ void unref(obj_t* obj)
 // obj makers
 //
 
-obj_t* make_nil()
-{
-    return (obj_t*)(NIL_TAG | IMM_TAG);
-}
-
-obj_t* make_true()
-{
-    return (obj_t*)(TRUE_TAG | IMM_TAG);
-}
-
 obj_t* make_symbol(const char* str)
 {
     int len = strlen(str);
@@ -248,16 +241,28 @@ int is_immediate(obj_t* obj)
     return (long)obj & IMM_TAG;
 }
 
-int is_nil(obj_t* obj)
+int is_inert(obj_t* obj)
 {
     assert(obj);
-    return obj == (obj_t*)(NIL_TAG | IMM_TAG);
+    return obj == KINERT;
 }
 
-int is_true(obj_t* obj)
+int is_ignore(obj_t* obj)
 {
     assert(obj);
-    return obj == (obj_t*)(TRUE_TAG | IMM_TAG);
+    return obj == KIGNORE;
+}
+
+int is_boolean(obj_t* obj)
+{
+    assert(obj);
+    return obj == KTRUE || obj == KFALSE;
+}
+
+int is_null(obj_t* obj)
+{
+    assert(obj);
+    return obj == KNULL;
 }
 
 int is_symbol(obj_t* obj)
@@ -275,7 +280,7 @@ int is_number(obj_t* obj)
 int is_pair(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == PAIR_OBJ;
+    return !is_immediate(obj) && obj->type == PAIR_OBJ && !is_null(obj);
 }
 
 int is_prim(obj_t* obj)
@@ -296,13 +301,39 @@ int is_env(obj_t* obj)
     return !is_immediate(obj) && obj->type == ENV_OBJ;
 }
 
-//
-// pair functions
-//
+obj_t* eval(obj_t* obj, obj_t* env)
+{
+    assert(obj);
+    assert(is_env(env));
+    if (is_symbol(obj))
+        return env_lookup(obj, env);
+    else if (is_pair(obj))
+        return KNULL; // TODO: apply(obj, env);
+    else
+        return obj;
+}
 
 obj_t* cons(obj_t* a, obj_t* b)
 {
     return make_pair(a, b);
+}
+
+obj_t* set_car(obj_t* obj, obj_t* value)
+{
+    assert(is_pair(obj));
+    ref(value);
+    unref(obj->data.pair.car);
+    obj->data.pair.car = value;
+    return KINERT;
+}
+
+obj_t* set_cdr(obj_t* obj, obj_t* value)
+{
+    assert(is_pair(obj));
+    ref(value);
+    unref(obj->data.pair.cdr);
+    obj->data.pair.cdr = value;
+    return KINERT;
 }
 
 obj_t* car(obj_t* obj)
@@ -316,6 +347,63 @@ obj_t* cdr(obj_t* obj)
     assert(is_pair(obj));
     return obj->data.pair.cdr;
 }
+
+obj_t* quote(obj_t* obj)
+{
+    return cons(make_symbol("quote"), cons(obj, KNULL));
+}
+
+obj_t* is_eq(obj_t* a, obj_t* b)
+{
+    if (is_immediate(a)) {
+        return a == b ? KTRUE : KFALSE;
+    } else if (a->type == b->type) {
+        switch (a->type) {
+        case SYMBOL_OBJ:
+            return a->data.symbol == b->data.symbol ? KTRUE : KFALSE;
+        case NUMBER_OBJ:
+            return a->data.number == b->data.number ? KTRUE : KFALSE;
+        default:    
+            return a == b ? KTRUE : KFALSE;
+        }
+    }
+    return KFALSE;
+}
+
+static obj_t* env_lookup(obj_t* symbol, obj_t* env)
+{
+    assert(is_symbol(symbol));
+    if (is_null(env))
+        env = g_env;
+    assert(env);
+
+    obj_t* pair = assq(symbol, env->data.env.plist);
+    if (!is_null(pair))
+        return cdr(pair);
+    else {
+        if (is_env(env->data.env.parent))
+            return env_lookup(symbol, env->data.env.parent);
+        else
+            return KNULL;
+    }
+}
+
+static obj_t* assq(obj_t* key, obj_t* plist)
+{
+    while (is_pair(plist)) {
+        obj_t* pair = car(plist);
+        if (is_eq(key, (car(pair))) == KTRUE) {
+            return pair;
+        }
+        plist = cdr(plist);
+    }
+    return KNULL;
+}
+
+/*
+//
+// pair functions
+//
 
 obj_t* cadr(obj_t* obj)
 {
@@ -337,24 +425,6 @@ obj_t* list3(obj_t* a, obj_t* b, obj_t* c)
     return cons(a, cons(b, cons(c, make_nil())));
 }
 
-obj_t* set_car(obj_t* obj, obj_t* value)
-{
-    assert(is_pair(obj));
-    ref(value);
-    unref(obj->data.pair.car);
-    obj->data.pair.car = value;
-    return make_nil();
-}
-
-obj_t* set_cdr(obj_t* obj, obj_t* value)
-{
-    assert(is_pair(obj));
-    ref(value);
-    unref(obj->data.pair.cdr);
-    obj->data.pair.cdr = value;
-    return make_nil();
-}
-
 obj_t* member(obj_t* obj, obj_t* lst)
 {
     while (!is_nil(lst)) {
@@ -365,40 +435,9 @@ obj_t* member(obj_t* obj, obj_t* lst)
     return make_nil();
 }
 
-obj_t* assoc(obj_t* key, obj_t* plist)
-{
-    while (!is_nil(plist)) {
-        obj_t* pair = car(plist);
-        if (!is_nil(is_equal(key, (car(pair))))) {
-            return pair;
-        }
-        plist = cdr(plist);
-    }
-    return make_nil();
-}
-
 //
 // equality
 //
-
-obj_t* is_eq(obj_t* a, obj_t* b)
-{
-    if (is_nil(a) && is_nil(b))
-        return make_true();
-    else if (is_true(a) && is_true(b)) {
-        return make_true();
-    } else if (!is_immediate(a) && !is_immediate(b) && a->type == b->type) {
-        switch (a->type) {
-        case SYMBOL_OBJ:
-            return a->data.symbol == b->data.symbol ? make_true() : make_nil();
-        case NUMBER_OBJ:
-            return a->data.number == b->data.number ? make_true() : make_nil();
-        default:    
-            return a == b ? make_true() : make_nil();
-        }
-    }
-    return make_nil();
-}
 
 obj_t* is_equal(obj_t* a, obj_t* b)
 {
@@ -447,32 +486,9 @@ obj_t* def(obj_t* symbol, obj_t* value, obj_t* env)
     return value;
 }
 
-obj_t* defined(obj_t* symbol, obj_t* env)
-{
-    assert(is_symbol(symbol));
-    if (is_nil(env))
-        env = g_env;
-    assert(env);
-
-    obj_t* pair = assoc(symbol, env->data.env.plist);
-    if (!is_nil(pair))
-        return cdr(pair);
-    else {
-        if (is_env(env->data.env.parent))
-            return defined(symbol, env->data.env.parent);
-        else
-            return make_nil();
-    }
-}
-
 //
 // special forms
 //
-
-obj_t* quote(obj_t* obj)
-{
-    return list2(make_symbol("quote"), obj);
-}
 
 obj_t* eval(obj_t* obj, obj_t* env)
 {
@@ -520,6 +536,7 @@ obj_t* apply(obj_t* obj, obj_t* env)
     unref(f);
     return result;
 }
+*/
 
 //
 // debug output
@@ -535,12 +552,20 @@ obj_t* apply(obj_t* obj, obj_t* env)
 
 void dump(obj_t* obj, int to_stderr)
 {
-    if (is_nil(obj))
-        PRINTF("nil");
-    else if (is_true(obj))
-        PRINTF("#t");
-    else {
-        assert(!is_immediate(obj));
+    if (is_immediate(obj)) {
+        if (obj == KIGNORE)
+            PRINTF("#ignore");
+        else if (obj == KINERT)
+            PRINTF("#inert");
+        else if (obj == KTRUE)
+            PRINTF("#t");
+        else if (obj == KFALSE)
+            PRINTF("#f");
+        else if (obj == KNULL)
+            PRINTF("()");
+        else
+            PRINTF("#???");
+    } else {
         switch (obj->type) {
         case NUMBER_OBJ:
             PRINTF("%f", obj->data.number);
@@ -550,15 +575,15 @@ void dump(obj_t* obj, int to_stderr)
             break;
         case PAIR_OBJ:
             PRINTF("(");
-            while (!is_nil(obj)) {
+            while (is_pair(obj)) {
                 dump(car(obj), to_stderr);
                 obj = cdr(obj);
-                if (!is_nil(obj) && !is_pair(obj)) {
+                if (!is_null(obj) && !is_pair(obj)) {
                     PRINTF(" . ");
                     dump(obj, to_stderr);
                     break;
                 }
-                if (!is_nil(obj))
+                if (!is_null(obj))
                     PRINTF(" ");
             }
             PRINTF(")");
@@ -586,7 +611,7 @@ void dump(obj_t* obj, int to_stderr)
 void init()
 {
     pool_init();
-    g_env = make_env(make_nil(), make_nil());
+    g_env = make_env(KNULL, KNULL);
     ref(g_env);
     prim_init();
     
