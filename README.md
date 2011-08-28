@@ -38,14 +38,23 @@ Kernel Notes
 * $if - sweet, lets just use if.
 * pair? - got it
 * null? - hmm, nil? instead?
-* cons - got it
+* cons - got it.
 * set-car! - DONE, return nil, instead of #inert
 * set-cdr! - DONE, return nil, instead of #inert
 * copy-es-immutable - uh... 
 * environment? - env?
 * ignore? - #ignore is a type, different from #inert. Skip it.
-* evals - take an environment.
+* eval - take an environment argument.
 * make-env - create an env with an optional parent env
-* curr-env - returns the current env scope.
+* $define! - in kernel, the first argument is a "formal-parameter-tree"....
+  this is what gives kernel it's destructuring-bind behavior.
+  let's see how far i can get without it.
+* operative?   - TODO
+* applicitive? - TODO
+* $vau
+* wrap
+* unwrap
+* *everything* else can be defined with the above...
+
 
 
