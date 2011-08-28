@@ -291,7 +291,7 @@ int is_pair(obj_t* obj)
     return !is_immediate(obj) && obj->type == PAIR_OBJ && !is_null(obj);
 }
 
-int is_env(obj_t* obj)
+int is_environment(obj_t* obj)
 {
     assert(obj);
     return !is_immediate(obj) && obj->type == ENV_OBJ;
@@ -387,13 +387,13 @@ obj_t* is_equal(obj_t* a, obj_t* b)
 obj_t* env_lookup(obj_t* env, obj_t* symbol)
 {
     assert(is_symbol(symbol));
-    assert(is_env(env));
+    assert(is_environment(env));
 
     obj_t* pair = assq(symbol, env->data.env.plist);
     if (!is_null(pair))
         return cdr(pair);
     else {
-        if (is_env(env->data.env.parent))
+        if (is_environment(env->data.env.parent))
             return env_lookup(env->data.env.parent, symbol);
         else
             return KNULL;
@@ -403,7 +403,7 @@ obj_t* env_lookup(obj_t* env, obj_t* symbol)
 obj_t* env_define(obj_t* env, obj_t* symbol, obj_t* value)
 {
     assert(is_symbol(symbol));
-    assert(is_env(env));
+    assert(is_environment(env));
 
     obj_t* plist = env->data.env.plist;
     if (is_pair(plist)) {

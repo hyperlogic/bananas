@@ -40,7 +40,6 @@ Immediate Values
 
 Type predicates
 ---------------------
-* TODO: the spec says these guys take an optional list of arguments (i think)
 * boolean? - #t and #f
 * ignore? - #ignore
 * inert? - #inert

@@ -20,7 +20,7 @@ static prim_info_t s_prim_infos[] = {
     {"symbol?", $is_symbol, 1}, 
     {"number?", $is_number, 1}, 
     {"pair?", $is_pair, 1}, 
-    {"environment?", $is_env, 1}, 
+    {"environment?", $is_environment, 1}, 
     {"operative?", $is_operative, 1}, 
     {"applicative?", $is_applicative, 1}, 
     {"$quote", $quote, 0}, 
@@ -100,7 +100,7 @@ DEF_TYPE_PREDICATE(is_null)
 DEF_TYPE_PREDICATE(is_symbol)
 DEF_TYPE_PREDICATE(is_number)
 DEF_TYPE_PREDICATE(is_pair)
-DEF_TYPE_PREDICATE(is_env)
+DEF_TYPE_PREDICATE(is_environment)
 DEF_TYPE_PREDICATE(is_prim)
 DEF_TYPE_PREDICATE(is_closure)
 DEF_TYPE_PREDICATE(is_operative)
@@ -135,7 +135,7 @@ static obj_t* mapcar_eval(obj_t* obj, obj_t* env)
 static obj_t* eval(obj_t* obj, obj_t* env)
 {
     assert(obj);
-    assert(is_env(env));
+    assert(is_environment(env));
     if (is_symbol(obj))
         return env_lookup(env, obj);
     else if (is_pair(obj)) {

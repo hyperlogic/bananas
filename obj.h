@@ -87,7 +87,7 @@ int is_number(obj_t* obj);
 int is_pair(obj_t* obj);
 int is_prim(obj_t* obj);
 int is_closure(obj_t* obj);
-int is_env(obj_t* obj);
+int is_environment(obj_t* obj);
 int is_operative(obj_t* obj);
 int is_applicative(obj_t* obj);
 
