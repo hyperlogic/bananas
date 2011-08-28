@@ -22,7 +22,7 @@ obj_t* $eq(obj_t* obj, obj_t* env);
 obj_t* $equal(obj_t* obj, obj_t* env);
 obj_t* $define(obj_t* obj, obj_t* env);
 obj_t* $eval(obj_t* obj, obj_t* env);
-
+obj_t* $if(obj_t* obj, obj_t* env);
 
 // pair stuff
 /*

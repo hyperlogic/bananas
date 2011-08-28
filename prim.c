@@ -27,6 +27,7 @@ static prim_info_t s_prim_infos[] = {
     {"equal?", $equal, 1},
     {"eval", $eval, 1},
     {"$define!", $define, 0}, 
+    {"$if", $if, 0},
 
     {"", NULL}
 };
@@ -175,24 +176,25 @@ obj_t* $eval(obj_t* obj, obj_t* env)
         return eval(a, env);
 }
 
-/*
-obj_t* prim_if(obj_t* obj, obj_t* env)
+obj_t* $if(obj_t* obj, obj_t* env)
 {
     obj_t* expr = eval(car(obj), env);
     ref(expr);
+    if (!is_boolean(expr)) {
+        unref(expr);
+        fprintf(stderr, "Error: result of $if expression is not a boolean\n");
+        assert(0);
+    }
     obj_t* true_body = car(cdr(obj));
     obj_t* else_body = car(cdr(cdr(obj)));
     obj_t* result;
-    if (!is_nil(expr))
+    if (expr == KTRUE)
         result = eval(true_body, env);
-    else if (!is_nil(else_body))
-        result = eval(else_body, env);
     else
-        result = make_nil();
+        result = eval(else_body, env);
     unref(expr);
     return result;
 }
-*/
 
 /*
 //

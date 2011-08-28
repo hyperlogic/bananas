@@ -38,8 +38,8 @@ Immediate Values
 * #ignore 
 * ()
 
-Type predicates
----------------------
+Core types and primitive features
+------------------------------------
 * boolean? - #t and #f
 * ignore? - #ignore
 * inert? - #inert
@@ -47,14 +47,13 @@ Type predicates
 * pair?
 * null?
 * environment?
-
+* applicative?
+* operative?
 * $define!
-* TODO: eval - take an environment argument.
-
-* TODO: eq?
-* TODO: equal? - I'm gonna skip the cycle handling part, for now.
-
-
+* eval
+* eq?
+* equal? - I'm gonna skip the cycle handling part, tho.
+* $if
 * TODO: copy-es-immutable - lets see how far I can get without this...
 
 
@@ -65,9 +64,7 @@ Type predicates
 * TODO: cons - got it.
 * TODO: environment?
 * TODO: make-env - create an env with an optional parent env
-* TODO: operative?   - TODO
-* TODO: applicitive? - TODO
-* TODO: $if
+
 * TODO: $vau
 * TODO: wrap
 * TODO: unwrap
