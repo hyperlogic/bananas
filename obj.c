@@ -626,9 +626,34 @@ void init()
     g_env = make_environment(KNULL, KNULL);
     ref(g_env);
     prim_init();
+
+    // we need $sequence before we can load files.
+    // because files contain sequences of expressions.
+    const char* seq_str = "($define! $sequence ((wrap ($vau ($seq2) #ignore \
+                             ($seq2 ($define! $aux \
+                               ($vau (head . tail) env ($if (null? tail) \
+                                 (eval head env) ($seq2 \
+                                   (eval head env) \
+                                     (eval (cons $aux tail) env))))) \
+                                        ($vau body env ($if (null? body) \
+                                                            #inert (eval (cons $aux body) env)))))) \
+                     ($vau (first second) env ((wrap ($vau #ignore #ignore (eval second env))) \
+                                               (eval first env)))))";
+    obj_t* e = read(seq_str);
+    ref(e);
+    obj_t* eval_list = cons(e, KNULL);
+    ref(eval_list);
+    obj_t* r = $eval(eval_list, g_env);
+    ref(r);
+    unref(eval_list);
     
-    // boot strap
-    obj_t* seq = read_file("bootstrap.ooo");
-    dump(seq, 1);
-    fprintf(stderr, "\n");
+    // bootstrap
+    obj_t* bootstrap = read_file("bootstrap.ooo");
+    ref(bootstrap);
+    eval_list = cons(bootstrap, KNULL);
+    ref(eval_list);
+    r = $eval(eval_list, g_env);
+    ref(r);
+    unref(eval_list);
+    unref(r);
 }

@@ -192,7 +192,7 @@ obj_t* parse_expr(const char** pp)
 obj_t* parse_expr_sequence(const char** pp)
 {
     // EXPR*
-    obj_t* root = cons(make_symbol("sequence"), KNULL);
+    obj_t* root = cons(make_symbol("$sequence"), KNULL);
     obj_t* pair = root;
     while(1) {
         while (isspace(PEEK(0)))

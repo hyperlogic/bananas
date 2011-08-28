@@ -59,10 +59,15 @@ Core types and primitive features
 * $define!
 * operative?
 * applicative?
-* TODO: $vau
-* TODO: wrap
-* TODO: unwrap
-* *everything* else can be defined with the above...
+* $vau
+* wrap
+* unwrap
+
+Core library features
+------------------------------
+* $sequence - memory leak...
+* list
+* list*
 
 
 

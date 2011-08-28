@@ -33,6 +33,8 @@ static prim_info_t s_prim_infos[] = {
     {"set-cdr!", $set_cdr, 1},
     {"make-environment", $make_environment, 1},
     {"$vau", $vau, 0},
+    {"wrap", $wrap, 1},
+    {"unwrap", $unwrap, 1},
 
     {"", NULL}
 };
@@ -94,6 +96,18 @@ obj_t* $equal(obj_t* obj, obj_t* env)
 
 static obj_t* eval(obj_t* obj, obj_t* env);
 
+static void match(obj_t* param_tree, obj_t* value_tree, obj_t* env)
+{
+    if (is_ignore(param_tree) || is_null(param_tree)) {
+        return;
+    } else if (is_symbol(param_tree)) {
+        env_define(env, param_tree, value_tree);
+    } else if (is_pair(param_tree) && is_pair(value_tree)) {
+        match(car(param_tree), car(value_tree), env);
+        match(cdr(param_tree), cdr(value_tree), env);
+    }
+}
+
 static obj_t* mapcar_eval(obj_t* obj, obj_t* env)
 {
     obj_t* result = KNULL;
@@ -111,18 +125,6 @@ static obj_t* mapcar_eval(obj_t* obj, obj_t* env)
         a = pair;
     }
     return result;
-}
-
-static void match(obj_t* param_tree, obj_t* value_tree, obj_t* env)
-{
-    if (is_ignore(param_tree) || is_null(param_tree)) {
-        return;
-    } else if (is_symbol(param_tree)) {
-        env_define(env, param_tree, value_tree);
-    } else if (is_pair(param_tree) && is_pair(value_tree)) {
-        match(car(param_tree), car(value_tree), env);
-        match(cdr(param_tree), cdr(value_tree), env);
-    }
 }
 
 static obj_t* eval(obj_t* obj, obj_t* env)
@@ -145,10 +147,13 @@ static obj_t* eval(obj_t* obj, obj_t* env)
                 obj_t* static_env = f->data.compound_operative.static_env;
 
                 obj_t* local_env = make_environment(KNULL, static_env);
+                ref(local_env);
                 match(formals, d, local_env);
                 if (is_symbol(eformal))
-                    env_define(local_env, eformal, eval(eformal, env));
-                return eval(body, local_env);
+                    env_define(local_env, eformal, env);
+                obj_t* result = eval(body, local_env);
+                unref(local_env);
+                return result;
             }
         } else if (is_applicative(f)) {
             // let dd be the evaluated arguments d in env
@@ -174,7 +179,9 @@ obj_t* $define(obj_t* obj, obj_t* env)
 {
     obj_t* param_tree = car(obj);
     obj_t* value_tree = eval(car(cdr(obj)), env);
+    ref(value_tree);
     match(param_tree, value_tree, env);
+    unref(value_tree);
     return KINERT;
 }
 
@@ -241,6 +248,24 @@ obj_t* $make_environment(obj_t* obj, obj_t* env)
 obj_t* $vau(obj_t* obj, obj_t* env)
 {
     return make_compound_operative(car(obj), car(cdr(obj)), car(cdr(cdr(obj))), env);
+}
+
+obj_t* $wrap(obj_t* obj, obj_t* env)
+{
+    if (!is_operative(car(obj))) {
+        fprintf(stderr, "ERROR: only operatives can be wrapped\n");
+        assert(0);
+    }
+    return make_applicative(car(obj));
+}
+
+obj_t* $unwrap(obj_t* obj, obj_t* env)
+{
+    if (!is_applicative(car(obj))) {
+        fprintf(stderr, "ERROR: only applicatives can be unwrapped\n");
+        assert(0);
+    }
+    return car(obj)->data.applicative.operative;
 }
 
 /*
