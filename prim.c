@@ -28,6 +28,7 @@ static prim_info_t s_prim_infos[] = {
     {"eval", $eval, 1},
     {"$define!", $define, 0}, 
     {"$if", $if, 0},
+    {"cons", $cons, 1},
 
     {"", NULL}
 };
@@ -194,6 +195,11 @@ obj_t* $if(obj_t* obj, obj_t* env)
         result = eval(else_body, env);
     unref(expr);
     return result;
+}
+
+obj_t* $cons(obj_t* obj, obj_t* env)
+{
+    return cons(car(obj), car(cdr(obj)));
 }
 
 /*

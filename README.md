@@ -55,13 +55,10 @@ Core types and primitive features
 * equal? - I'm gonna skip the cycle handling part, tho.
 * $if
 * TODO: copy-es-immutable - lets see how far I can get without this...
-
-
-
+* cons
 
 * TODO: set-car! - DONE, return nil, instead of #inert
 * TODO: set-cdr! - DONE, return nil, instead of #inert
-* TODO: cons - got it.
 * TODO: environment?
 * TODO: make-env - create an env with an optional parent env
 
