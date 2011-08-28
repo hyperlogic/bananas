@@ -36,36 +36,42 @@ Immediate Values
 * #f
 * #inert
 * #ignore 
+* ()
 
 Type predicates
 ---------------------
+* TODO: the spec says these guys take an optional list of arguments (i think)
 * boolean? - #t and #f
 * ignore? - #ignore
 * inert? - #inert
 * symbol?
 * pair?
 * null?
+* environment?
 
-* eq?
-* equal? - needs to handle cycles, I'm just gonna skip this too.
+* $define!
+* TODO: eval - take an environment argument.
 
-* $if
+* TODO: eq?
+* TODO: equal? - I'm gonna skip the cycle handling part, for now.
 
-* cons - got it.
-* set-car! - DONE, return nil, instead of #inert
-* set-cdr! - DONE, return nil, instead of #inert
-* copy-es-immutable - uh... 
-* environment? - env?
-* eval - take an environment argument.
-* make-env - create an env with an optional parent env
-* $define! - in kernel, the first argument is a "formal-parameter-tree"....
-  this is what gives kernel it's destructuring-bind behavior.
-  let's see how far i can get without it.
-* operative?   - TODO
-* applicitive? - TODO
-* $vau
-* wrap
-* unwrap
+
+* TODO: copy-es-immutable - lets see how far I can get without this...
+
+
+
+
+* TODO: set-car! - DONE, return nil, instead of #inert
+* TODO: set-cdr! - DONE, return nil, instead of #inert
+* TODO: cons - got it.
+* TODO: environment?
+* TODO: make-env - create an env with an optional parent env
+* TODO: operative?   - TODO
+* TODO: applicitive? - TODO
+* TODO: $if
+* TODO: $vau
+* TODO: wrap
+* TODO: unwrap
 * *everything* else can be defined with the above...
 
 

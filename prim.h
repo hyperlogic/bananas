@@ -5,19 +5,22 @@
 
 void prim_init();
 
-// type predicates
-obj_t* prim_is_inert(obj_t* obj, obj_t* env);
-obj_t* prim_is_ignore(obj_t* obj, obj_t* env);
-obj_t* prim_is_boolean(obj_t* obj, obj_t* env);
-obj_t* prim_is_null(obj_t* obj, obj_t* env);
-obj_t* prim_is_symbol(obj_t* obj, obj_t* env);
-obj_t* prim_is_number(obj_t* obj, obj_t* env);
-obj_t* prim_is_pair(obj_t* obj, obj_t* env);
-obj_t* prim_is_prim(obj_t* obj, obj_t* env);
-obj_t* prim_is_closure(obj_t* obj, obj_t* env);
-obj_t* prim_is_env(obj_t* obj, obj_t* env);
+obj_t* $is_inert(obj_t* obj, obj_t* env);
+obj_t* $is_ignore(obj_t* obj, obj_t* env);
+obj_t* $is_boolean(obj_t* obj, obj_t* env);
+obj_t* $is_null(obj_t* obj, obj_t* env);
+obj_t* $is_symbol(obj_t* obj, obj_t* env);
+obj_t* $is_number(obj_t* obj, obj_t* env);
+obj_t* $is_pair(obj_t* obj, obj_t* env);
+obj_t* $is_env(obj_t* obj, obj_t* env);
+obj_t* $is_prim(obj_t* obj, obj_t* env);
+obj_t* $is_closure(obj_t* obj, obj_t* env);
+obj_t* $is_operative(obj_t* obj, obj_t* env);
+obj_t* $is_applicative(obj_t* obj, obj_t* env);
+obj_t* $quote(obj_t* obj, obj_t* env);
+obj_t* $define(obj_t* obj, obj_t* env);
+obj_t* $eval(obj_t* obj, obj_t* env);
 
-obj_t* prim_$define(obj_t* obj, obj_t* env);
 
 // pair stuff
 /*

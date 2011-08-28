@@ -164,7 +164,7 @@ obj_t* parse_quoted_expr(const char** pp)
         PARSE_ERROR("Expected a quote");
 
     obj_t* e = parse_expr(pp);
-    return quote(e);
+    return cons(make_symbol("$quote"), cons(e, KNULL));
 }
 
 obj_t* parse_expr(const char** pp)

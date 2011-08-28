@@ -8,12 +8,6 @@ typedef struct {
     struct obj_struct* cdr;
 } pair_t;
 
-typedef struct {
-    struct obj_struct* args;
-    struct obj_struct* body;
-    struct obj_struct* env;
-} closure_t;
-
 typedef struct env_struct {
     struct obj_struct* plist;
     struct obj_struct* parent;
@@ -21,13 +15,25 @@ typedef struct env_struct {
 
 typedef struct obj_struct* (*prim_t)(struct obj_struct* args, struct obj_struct* env);
 
-enum obj_type { SYMBOL_OBJ = 0, PAIR_OBJ, NUMBER_OBJ, PRIM_OBJ, CLOSURE_OBJ, ENV_OBJ };
+typedef struct {
+    struct obj_struct* args;
+    struct obj_struct* body;
+    struct obj_struct* env;
+} closure_t;
+
+typedef struct {
+    struct obj_struct* operative;
+} applicative_t;
+
+enum obj_type { SYMBOL_OBJ = 0, PAIR_OBJ, NUMBER_OBJ, ENV_OBJ, 
+                PRIM_OBJ, CLOSURE_OBJ, APPLICATIVE_OBJ };
 
 // the last 5 bits are used to indicate immediate values.
 enum obj_immedate_tags { IMM_TAG = 1, INERT_TAG = 2, 
                          IGNORE_TAG = 4, TRUE_TAG = 8, 
                          FALSE_TAG = 16, NULL_TAG = 32, TAG_MASK = 63 };
 
+// immediate constants
 #define KINERT ((obj_t*)(INERT_TAG | IMM_TAG))
 #define KIGNORE ((obj_t*)(IGNORE_TAG | IMM_TAG))
 #define KTRUE ((obj_t*)(TRUE_TAG | IMM_TAG))
@@ -39,16 +45,17 @@ typedef struct obj_struct {
         int symbol;
         double number;
         pair_t pair;
+        env_t env;
         prim_t prim;
         closure_t closure;
-        env_t env;
-    } data;                   // + 0
-    struct obj_struct* next;  // + 24
-    struct obj_struct* prev;  // + 32
-    enum obj_type type;       // + 40
-    int ref_count;            // + 44
-    char padding[16];         // + 48
-} obj_t;               // sizeof = 64
+        applicative_t applicative;
+    } data;                          // +  0
+    struct obj_struct* next;         // + 24
+    struct obj_struct* prev;         // + 32
+    enum obj_type type;              // + 40
+    int ref_count;                   // + 44
+    char padding[16];                // + 48
+} obj_t;                      // sizeof = 64
 
 extern int g_num_free_objs;
 extern int g_num_used_objs;
@@ -64,9 +71,10 @@ obj_t* make_symbol2(const char* start, const char* end);
 obj_t* make_number(double num);
 obj_t* make_number2(const char* start, const char* end);
 obj_t* make_pair(obj_t* car, obj_t* cdr);
+obj_t* make_env(obj_t* plist, obj_t* parent);
 obj_t* make_prim(prim_t prim);
 obj_t* make_closure(obj_t* args, obj_t* body, obj_t* env);
-obj_t* make_env(obj_t* plist, obj_t* parent);
+obj_t* make_applicative(obj_t* operative);
 
 // obj type predicates
 int is_immediate(obj_t* obj);
@@ -80,16 +88,20 @@ int is_pair(obj_t* obj);
 int is_prim(obj_t* obj);
 int is_closure(obj_t* obj);
 int is_env(obj_t* obj);
+int is_operative(obj_t* obj);
+int is_applicative(obj_t* obj);
 
 obj_t* cons(obj_t* a, obj_t* b);
-obj_t* eval(obj_t* obj, obj_t* env);
 obj_t* car(obj_t* obj);
 obj_t* cdr(obj_t* obj);
 obj_t* set_car(obj_t* obj, obj_t* value);
 obj_t* set_cdr(obj_t* obj, obj_t* value);
 
-obj_t* quote(obj_t* obj);
 obj_t* is_eq(obj_t* a, obj_t* b);
+obj_t* is_equal(obj_t* a, obj_t* b);
+
+obj_t* env_define(obj_t* env, obj_t* symbol, obj_t* value);
+obj_t* env_lookup(obj_t* env, obj_t* symbol);
 
 /*
 // pair functions

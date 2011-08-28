@@ -22,7 +22,6 @@ int g_num_used_objs = 0;
 // root environment
 obj_t* g_env = NULL;
 
-static obj_t* env_lookup(obj_t* symbol, obj_t* env);
 static obj_t* assq(obj_t* key, obj_t* plist);
 
 //
@@ -197,6 +196,18 @@ obj_t* make_pair(obj_t* car, obj_t* cdr)
     return obj;
 }
 
+obj_t* make_env(obj_t* plist, obj_t* parent)
+{
+    ref(plist);
+    ref(parent);
+    obj_t* obj = pool_alloc();
+    obj->type = ENV_OBJ;
+    obj->data.env.plist = plist;
+    obj->data.env.parent = parent;
+    obj->ref_count = 0;
+    return obj;
+}
+
 obj_t* make_prim(prim_t prim)
 {
     obj_t* obj = pool_alloc();
@@ -219,15 +230,12 @@ obj_t* make_closure(obj_t* args, obj_t* body, obj_t* env)
     return obj;
 }
 
-obj_t* make_env(obj_t* plist, obj_t* parent)
+obj_t* make_applicative(obj_t* operative)
 {
-    ref(plist);
-    ref(parent);
+    ref(operative);
     obj_t* obj = pool_alloc();
-    obj->type = ENV_OBJ;
-    obj->data.env.plist = plist;
-    obj->data.env.parent = parent;
-    obj->ref_count = 0;
+    obj->type = APPLICATIVE_OBJ;
+    obj->data.applicative.operative = operative;
     return obj;
 }
 
@@ -283,6 +291,12 @@ int is_pair(obj_t* obj)
     return !is_immediate(obj) && obj->type == PAIR_OBJ && !is_null(obj);
 }
 
+int is_env(obj_t* obj)
+{
+    assert(obj);
+    return !is_immediate(obj) && obj->type == ENV_OBJ;
+}
+
 int is_prim(obj_t* obj)
 {
     assert(obj);
@@ -295,23 +309,18 @@ int is_closure(obj_t* obj)
     return !is_immediate(obj) && obj->type == CLOSURE_OBJ;
 }
 
-int is_env(obj_t* obj)
+int is_operative(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == ENV_OBJ;
+    return is_prim(obj) || is_closure(obj);
 }
 
-obj_t* eval(obj_t* obj, obj_t* env)
+int is_applicative(obj_t* obj)
 {
     assert(obj);
-    assert(is_env(env));
-    if (is_symbol(obj))
-        return env_lookup(obj, env);
-    else if (is_pair(obj))
-        return KNULL; // TODO: apply(obj, env);
-    else
-        return obj;
+    return !is_immediate(obj) && obj->type == APPLICATIVE_OBJ;
 }
+
 
 obj_t* cons(obj_t* a, obj_t* b)
 {
@@ -348,11 +357,6 @@ obj_t* cdr(obj_t* obj)
     return obj->data.pair.cdr;
 }
 
-obj_t* quote(obj_t* obj)
-{
-    return cons(make_symbol("quote"), cons(obj, KNULL));
-}
-
 obj_t* is_eq(obj_t* a, obj_t* b)
 {
     if (is_immediate(a)) {
@@ -370,23 +374,67 @@ obj_t* is_eq(obj_t* a, obj_t* b)
     return KFALSE;
 }
 
-static obj_t* env_lookup(obj_t* symbol, obj_t* env)
+obj_t* is_equal(obj_t* a, obj_t* b)
+{
+    if (is_pair(a) && is_pair(b)) {
+        int car_eq = is_equal(car(a), car(b)) == KTRUE;
+        int cdr_eq = is_equal(cdr(a), cdr(b)) == KTRUE;
+        return (car_eq && cdr_eq) ? KTRUE : KFALSE;
+    } else
+        return is_eq(a, b);
+}
+
+obj_t* env_lookup(obj_t* env, obj_t* symbol)
 {
     assert(is_symbol(symbol));
-    if (is_null(env))
-        env = g_env;
-    assert(env);
+    assert(is_env(env));
 
     obj_t* pair = assq(symbol, env->data.env.plist);
     if (!is_null(pair))
         return cdr(pair);
     else {
         if (is_env(env->data.env.parent))
-            return env_lookup(symbol, env->data.env.parent);
+            return env_lookup(env->data.env.parent, symbol);
         else
             return KNULL;
     }
 }
+
+obj_t* env_define(obj_t* env, obj_t* symbol, obj_t* value)
+{
+    assert(is_symbol(symbol));
+    assert(is_env(env));
+
+    obj_t* plist = env->data.env.plist;
+    if (is_pair(plist)) {
+
+        // find symbol in plist.
+        obj_t* prev = plist;
+        while (is_pair(plist)) {
+            obj_t* pair = car(plist);
+            if (is_eq(symbol, car(pair)) == KTRUE)
+                break;
+            prev = plist;
+            plist = cdr(plist);
+        }
+
+        if (is_pair(plist)) {
+            // found it. replace old cdr with new value.
+            set_cdr(car(plist), value);
+        } else {
+            // did not find it. so add a new property to the end.
+            set_cdr(prev, cons(cons(symbol, value), KNULL));
+        }
+    } else {
+        // brand new plist.
+        obj_t* new_plist = cons(cons(symbol, value), KNULL);
+        ref(new_plist);
+        env->data.env.plist = new_plist;
+    }
+
+    return value;
+}
+
 
 static obj_t* assq(obj_t* key, obj_t* plist)
 {
@@ -439,52 +487,11 @@ obj_t* member(obj_t* obj, obj_t* lst)
 // equality
 //
 
-obj_t* is_equal(obj_t* a, obj_t* b)
-{
-    if (is_pair(a) && is_pair(b)) {
-        obj_t* car_eq = is_equal(car(a), car(b));
-        obj_t* cdr_eq = is_equal(cdr(a), cdr(b));
-        return !is_nil(car_eq) && !is_nil(cdr_eq) ? make_true() : make_nil();
-    } else {
-        return is_eq(a, b);
-    }
-}
 
 //
 // env functions
 //
 
-obj_t* def(obj_t* symbol, obj_t* value, obj_t* env)
-{
-    assert(is_symbol(symbol));
-    if (is_nil(env))
-        env = g_env;
-    assert(env);
-
-    obj_t* plist = env->data.env.plist;
-    if (!is_nil(plist)) {
-        // iterate over plist.
-        obj_t* prev = plist;
-        while (!is_nil(plist)) {
-            obj_t* pair = car(plist);
-            if (!is_nil(is_eq(symbol, car(pair))))
-                break;
-            prev = plist;
-            plist = cdr(plist);
-        }
-
-        if (!is_nil(plist))
-            set_cdr(car(plist), value);
-        else 
-            set_cdr(prev, cons(cons(symbol, value), make_nil()));
-    } else {
-        obj_t* new_plist = cons(cons(symbol, value), make_nil());
-        ref(new_plist);
-        env->data.env.plist = new_plist;
-    }
-
-    return value;
-}
 
 //
 // special forms
@@ -588,14 +595,17 @@ void dump(obj_t* obj, int to_stderr)
             }
             PRINTF(")");
             break;
+        case ENV_OBJ:
+            PRINTF("#<env 0x%p>", obj);
+            break;
         case PRIM_OBJ:
             PRINTF("#<prim 0x%p>", obj->data.prim);
             break;
         case CLOSURE_OBJ:
             PRINTF("#<closure 0x%p>", obj);
             break;
-        case ENV_OBJ:
-            PRINTF("#<env 0x%p>", obj);
+        case APPLICATIVE_OBJ:
+            PRINTF("#<applicative 0x%p>", obj);
             break;
         default:
             PRINTF("???");
@@ -610,6 +620,8 @@ void dump(obj_t* obj, int to_stderr)
 
 void init()
 {
+    assert(sizeof(obj_t) == 64);
+
     pool_init();
     g_env = make_env(KNULL, KNULL);
     ref(g_env);
@@ -620,4 +632,3 @@ void init()
     dump(seq, 1);
     fprintf(stderr, "\n");
 }
-

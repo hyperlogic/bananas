@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
         obj_t* n = read(line);
         ref(n);
         free(line);
-        obj_t* r = eval(n, repl_env);
+        obj_t* r = $eval(cons(n, KNULL), repl_env);
         ref(r);
         unref(n);
         printf("  ");
