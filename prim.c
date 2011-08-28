@@ -82,19 +82,34 @@ void prim_init()
     }
 }
 
-obj_t* $is_inert(obj_t* obj, obj_t* env) { return is_inert(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_ignore(obj_t* obj, obj_t* env) { return is_ignore(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_boolean(obj_t* obj, obj_t* env) { return is_boolean(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_null(obj_t* obj, obj_t* env) { return is_null(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_symbol(obj_t* obj, obj_t* env) { return is_symbol(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_number(obj_t* obj, obj_t* env) { return is_number(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_pair(obj_t* obj, obj_t* env) { return is_pair(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_env(obj_t* obj, obj_t* env) { return is_env(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_prim(obj_t* obj, obj_t* env) { return is_prim(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_closure(obj_t* obj, obj_t* env) { return is_closure(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_operative(obj_t* obj, obj_t* env) { return is_operative(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $is_applicative(obj_t* obj, obj_t* env) { return is_applicative(car(obj)) ? KTRUE : KFALSE; }
-obj_t* $quote(obj_t* obj, obj_t* env) { return car(obj); }
+#define DEF_TYPE_PREDICATE(name)                \
+    obj_t* $##name(obj_t* obj, obj_t* env)      \
+    {                                           \
+        while (is_pair(obj)) {                  \
+            if (! name(car(obj)))               \
+                return KFALSE;                  \
+            obj = cdr(obj);                     \
+        }                                       \
+        return KTRUE;                           \
+    }
+
+DEF_TYPE_PREDICATE(is_inert)
+DEF_TYPE_PREDICATE(is_ignore)
+DEF_TYPE_PREDICATE(is_boolean)
+DEF_TYPE_PREDICATE(is_null)
+DEF_TYPE_PREDICATE(is_symbol)
+DEF_TYPE_PREDICATE(is_number)
+DEF_TYPE_PREDICATE(is_pair)
+DEF_TYPE_PREDICATE(is_env)
+DEF_TYPE_PREDICATE(is_prim)
+DEF_TYPE_PREDICATE(is_closure)
+DEF_TYPE_PREDICATE(is_operative)
+DEF_TYPE_PREDICATE(is_applicative)
+
+obj_t* $quote(obj_t* obj, obj_t* env) 
+{ 
+    return car(obj);
+}
 
 static obj_t* eval(obj_t* obj, obj_t* env);
 
