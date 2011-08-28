@@ -13,8 +13,6 @@ obj_t* $is_symbol(obj_t* obj, obj_t* env);
 obj_t* $is_number(obj_t* obj, obj_t* env);
 obj_t* $is_pair(obj_t* obj, obj_t* env);
 obj_t* $is_environment(obj_t* obj, obj_t* env);
-obj_t* $is_prim(obj_t* obj, obj_t* env);
-obj_t* $is_closure(obj_t* obj, obj_t* env);
 obj_t* $is_operative(obj_t* obj, obj_t* env);
 obj_t* $is_applicative(obj_t* obj, obj_t* env);
 obj_t* $quote(obj_t* obj, obj_t* env);

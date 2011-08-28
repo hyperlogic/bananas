@@ -13,20 +13,21 @@ typedef struct env_struct {
     struct obj_struct* parent;
 } env_t;
 
-typedef struct obj_struct* (*prim_t)(struct obj_struct* args, struct obj_struct* env);
+typedef struct obj_struct* (*prim_operative_t)(struct obj_struct* args, struct obj_struct* env);
 
 typedef struct {
-    struct obj_struct* args;
+    struct obj_struct* formals;
+    struct obj_struct* eformal;
+    struct obj_struct* static_env;
     struct obj_struct* body;
-    struct obj_struct* env;
-} closure_t;
+} compound_operative_t;
 
 typedef struct {
     struct obj_struct* operative;
 } applicative_t;
 
 enum obj_type { SYMBOL_OBJ = 0, PAIR_OBJ, NUMBER_OBJ, ENV_OBJ, 
-                PRIM_OBJ, CLOSURE_OBJ, APPLICATIVE_OBJ };
+                PRIM_OPERATIVE_OBJ, COMPOUND_OPERATIVE_OBJ, APPLICATIVE_OBJ };
 
 // the last 5 bits are used to indicate immediate values.
 enum obj_immedate_tags { IMM_TAG = 1, INERT_TAG = 2, 
@@ -46,15 +47,15 @@ typedef struct obj_struct {
         double number;
         pair_t pair;
         env_t env;
-        prim_t prim;
-        closure_t closure;
+        prim_operative_t prim_operative;
+        compound_operative_t compound_operative;
         applicative_t applicative;
     } data;                          // +  0
-    struct obj_struct* next;         // + 24
-    struct obj_struct* prev;         // + 32
-    enum obj_type type;              // + 40
-    int ref_count;                   // + 44
-    char padding[16];                // + 48
+    struct obj_struct* next;         // + 32
+    struct obj_struct* prev;         // + 40
+    enum obj_type type;              // + 48
+    int ref_count;                   // + 52
+    char padding[8];                 // + 56
 } obj_t;                      // sizeof = 64
 
 extern int g_num_free_objs;
@@ -72,8 +73,8 @@ obj_t* make_number(double num);
 obj_t* make_number2(const char* start, const char* end);
 obj_t* make_pair(obj_t* car, obj_t* cdr);
 obj_t* make_environment(obj_t* plist, obj_t* parent);
-obj_t* make_prim(prim_t prim);
-obj_t* make_closure(obj_t* args, obj_t* body, obj_t* env);
+obj_t* make_prim_operative(prim_operative_t prim);
+obj_t* make_compound_operative(obj_t* formals, obj_t* eformal, obj_t* body, obj_t* static_env);
 obj_t* make_applicative(obj_t* operative);
 
 // obj type predicates
@@ -85,9 +86,9 @@ int is_null(obj_t* obj);
 int is_symbol(obj_t* obj);
 int is_number(obj_t* obj);
 int is_pair(obj_t* obj);
-int is_prim(obj_t* obj);
-int is_closure(obj_t* obj);
 int is_environment(obj_t* obj);
+int is_prim_operative(obj_t* obj);
+int is_compound_operative(obj_t* obj);
 int is_operative(obj_t* obj);
 int is_applicative(obj_t* obj);
 

@@ -6,7 +6,7 @@
 
 typedef struct { 
     const char* name;
-    prim_t prim;
+    prim_operative_t prim;
     int wrap;
 } prim_info_t;
 
@@ -44,11 +44,11 @@ void prim_init()
     while (p->prim) {
         if (p->wrap) {
             obj_t* symbol = make_symbol(p->name);
-            obj_t* applicative = make_applicative(make_prim(p->prim));
+            obj_t* applicative = make_applicative(make_prim_operative(p->prim));
             $define(cons(symbol, cons(applicative, KNULL)), g_env);
         } else {
             obj_t* symbol = make_symbol(p->name);
-            obj_t* prim = make_prim(p->prim);
+            obj_t* prim = make_prim_operative(p->prim);
             $define(cons(symbol, cons(prim, KNULL)), g_env);
         }
         p++;
@@ -74,8 +74,6 @@ DEF_TYPE_PREDICATE(is_symbol)
 DEF_TYPE_PREDICATE(is_number)
 DEF_TYPE_PREDICATE(is_pair)
 DEF_TYPE_PREDICATE(is_environment)
-DEF_TYPE_PREDICATE(is_prim)
-DEF_TYPE_PREDICATE(is_closure)
 DEF_TYPE_PREDICATE(is_operative)
 DEF_TYPE_PREDICATE(is_applicative)
 
@@ -115,6 +113,18 @@ static obj_t* mapcar_eval(obj_t* obj, obj_t* env)
     return result;
 }
 
+static void match(obj_t* param_tree, obj_t* value_tree, obj_t* env)
+{
+    if (is_ignore(param_tree) || is_null(param_tree)) {
+        return;
+    } else if (is_symbol(param_tree)) {
+        env_define(env, param_tree, value_tree);
+    } else if (is_pair(param_tree) && is_pair(value_tree)) {
+        match(car(param_tree), car(value_tree), env);
+        match(cdr(param_tree), cdr(value_tree), env);
+    }
+}
+
 static obj_t* eval(obj_t* obj, obj_t* env)
 {
     assert(obj);
@@ -125,11 +135,20 @@ static obj_t* eval(obj_t* obj, obj_t* env)
         obj_t* f = eval(car(obj), env);
         obj_t* d = cdr(obj);
         if (is_operative(f)) {
-            if (is_prim(f)) {
-                return f->data.prim(d, env);
+            if (is_prim_operative(f)) {
+                return f->data.prim_operative(d, env);
             } else {
-                // apply closure
-                return KNULL; // TODO:
+                assert(is_compound_operative(f));
+                obj_t* formals = f->data.compound_operative.formals;
+                obj_t* eformal = f->data.compound_operative.eformal;
+                obj_t* body = f->data.compound_operative.body;
+                obj_t* static_env = f->data.compound_operative.static_env;
+
+                obj_t* local_env = make_environment(KNULL, static_env);
+                match(formals, d, local_env);
+                if (is_symbol(eformal))
+                    env_define(local_env, eformal, eval(eformal, env));
+                return eval(body, local_env);
             }
         } else if (is_applicative(f)) {
             // let dd be the evaluated arguments d in env
@@ -149,18 +168,6 @@ static obj_t* eval(obj_t* obj, obj_t* env)
         }
     } else 
         return obj;
-}
-
-static void match(obj_t* param_tree, obj_t* value_tree, obj_t* env)
-{
-    if (is_ignore(param_tree) || is_null(param_tree)) {
-        return;
-    } else if (is_symbol(param_tree)) {
-        env_define(env, param_tree, value_tree);
-    } else if (is_pair(param_tree) && is_pair(value_tree)) {
-        match(car(param_tree), car(value_tree), env);
-        match(cdr(param_tree), cdr(value_tree), env);
-    }
 }
 
 obj_t* $define(obj_t* obj, obj_t* env)
@@ -233,7 +240,7 @@ obj_t* $make_environment(obj_t* obj, obj_t* env)
 
 obj_t* $vau(obj_t* obj, obj_t* env)
 {
-
+    return make_compound_operative(car(obj), car(cdr(obj)), car(cdr(cdr(obj))), env);
 }
 
 /*

@@ -92,14 +92,15 @@ static void destroy_obj(obj_t* obj)
         unref(obj->data.pair.car);
         unref(obj->data.pair.cdr);
         break;
-    case CLOSURE_OBJ:
-        unref(obj->data.closure.args);
-        unref(obj->data.closure.body);
-        unref(obj->data.closure.env);
-        break;
     case ENV_OBJ:
         unref(obj->data.env.plist);
         unref(obj->data.env.parent);
+        break;
+    case COMPOUND_OPERATIVE_OBJ:
+        unref(obj->data.compound_operative.formals);
+        unref(obj->data.compound_operative.eformal);
+        unref(obj->data.compound_operative.body);
+        unref(obj->data.compound_operative.static_env);
         break;
     default:
         break;
@@ -208,24 +209,26 @@ obj_t* make_environment(obj_t* plist, obj_t* parent)
     return obj;
 }
 
-obj_t* make_prim(prim_t prim)
+obj_t* make_prim_operative(prim_operative_t prim)
 {
     obj_t* obj = pool_alloc();
-    obj->type = PRIM_OBJ;
-    obj->data.prim = prim;
+    obj->type = PRIM_OPERATIVE_OBJ;
+    obj->data.prim_operative = prim;
     return obj;
 }
 
-obj_t* make_closure(obj_t* args, obj_t* body, obj_t* env)
+obj_t* make_compound_operative(obj_t* formals, obj_t* eformal, obj_t* body, obj_t* static_env)
 {
-    ref(args);
+    ref(formals);
+    ref(eformal);
     ref(body);
-    ref(env);
+    ref(static_env);
     obj_t* obj = pool_alloc();
-    obj->type = CLOSURE_OBJ;
-    obj->data.closure.args = args;
-    obj->data.closure.body = body;
-    obj->data.closure.env = env;
+    obj->type = COMPOUND_OPERATIVE_OBJ;
+    obj->data.compound_operative.formals = formals;
+    obj->data.compound_operative.eformal = eformal;
+    obj->data.compound_operative.body = body;
+    obj->data.compound_operative.static_env = static_env;
     obj->ref_count = 0;
     return obj;
 }
@@ -297,22 +300,22 @@ int is_environment(obj_t* obj)
     return !is_immediate(obj) && obj->type == ENV_OBJ;
 }
 
-int is_prim(obj_t* obj)
+int is_prim_operative(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == PRIM_OBJ;
+    return !is_immediate(obj) && obj->type == PRIM_OPERATIVE_OBJ;
 }
 
-int is_closure(obj_t* obj)
+int is_compound_operative(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == CLOSURE_OBJ;
+    return !is_immediate(obj) && obj->type == COMPOUND_OPERATIVE_OBJ;
 }
 
 int is_operative(obj_t* obj)
 {
     assert(obj);
-    return is_prim(obj) || is_closure(obj);
+    return is_prim_operative(obj) || is_compound_operative(obj);
 }
 
 int is_applicative(obj_t* obj)
@@ -320,7 +323,6 @@ int is_applicative(obj_t* obj)
     assert(obj);
     return !is_immediate(obj) && obj->type == APPLICATIVE_OBJ;
 }
-
 
 obj_t* cons(obj_t* a, obj_t* b)
 {
@@ -596,11 +598,11 @@ void dump(obj_t* obj, int to_stderr)
         case ENV_OBJ:
             PRINTF("#<env 0x%p>", obj);
             break;
-        case PRIM_OBJ:
-            PRINTF("#<prim 0x%p>", obj->data.prim);
+        case PRIM_OPERATIVE_OBJ:
+            PRINTF("#<prim-operative 0x%p>", obj);
             break;
-        case CLOSURE_OBJ:
-            PRINTF("#<closure 0x%p>", obj);
+        case COMPOUND_OPERATIVE_OBJ:
+            PRINTF("#<compound-operative 0x%p>", obj);
             break;
         case APPLICATIVE_OBJ:
             PRINTF("#<applicative 0x%p>", obj);
