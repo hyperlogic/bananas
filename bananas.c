@@ -110,6 +110,10 @@ int main(int argc, char* argv[])
         if (line && *line)
             add_history(line);
         obj_t* n = read(line);
+
+        // dump output from read
+        // dump(n, 0); printf("\n");
+
         ref(n);
         free(line);
         obj_t* r = $eval(cons(n, KNULL), repl_env);

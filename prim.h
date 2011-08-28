@@ -18,6 +18,8 @@ obj_t* $is_closure(obj_t* obj, obj_t* env);
 obj_t* $is_operative(obj_t* obj, obj_t* env);
 obj_t* $is_applicative(obj_t* obj, obj_t* env);
 obj_t* $quote(obj_t* obj, obj_t* env);
+obj_t* $eq(obj_t* obj, obj_t* env);
+obj_t* $equal(obj_t* obj, obj_t* env);
 obj_t* $define(obj_t* obj, obj_t* env);
 obj_t* $eval(obj_t* obj, obj_t* env);
 

@@ -91,14 +91,15 @@ int is_environment(obj_t* obj);
 int is_operative(obj_t* obj);
 int is_applicative(obj_t* obj);
 
+// helpers
 obj_t* cons(obj_t* a, obj_t* b);
 obj_t* car(obj_t* obj);
 obj_t* cdr(obj_t* obj);
 obj_t* set_car(obj_t* obj, obj_t* value);
 obj_t* set_cdr(obj_t* obj, obj_t* value);
 
-obj_t* is_eq(obj_t* a, obj_t* b);
-obj_t* is_equal(obj_t* a, obj_t* b);
+int is_eq(obj_t* a, obj_t* b);
+int is_equal(obj_t* a, obj_t* b);
 
 obj_t* env_define(obj_t* env, obj_t* symbol, obj_t* value);
 obj_t* env_lookup(obj_t* env, obj_t* symbol);

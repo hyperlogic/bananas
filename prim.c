@@ -12,7 +12,6 @@ typedef struct {
 
 static prim_info_t s_prim_infos[] = {
 
-    // type predicates
     {"inert?", $is_inert, 1}, 
     {"ignore?", $is_ignore, 1}, 
     {"boolean?", $is_boolean, 1}, 
@@ -24,42 +23,10 @@ static prim_info_t s_prim_infos[] = {
     {"operative?", $is_operative, 1}, 
     {"applicative?", $is_applicative, 1}, 
     {"$quote", $quote, 0}, 
+    {"eq?", $eq, 1},
+    {"equal?", $equal, 1},
     {"eval", $eval, 1},
     {"$define!", $define, 0}, 
-
-    /*
-    // pair stuff
-    {"cons", prim_cons},
-    {"car", prim_car},
-    {"cdr", prim_cdr},
-    {"cadr", prim_cadr},
-    {"assoc", prim_assoc},
-    {"set-car!", prim_set_car},
-    {"set-cdr!", prim_set_cdr},
-
-    // env stuff
-    {"curr-env", prim_curr_env},
-    {"make-env", prim_make_env},
-    {"def", prim_def},
-    {"defined?", prim_defined},
-
-    // equality
-    {"eq?", prim_is_eq},
-    {"equal?", prim_is_equal},
-
-    // math
-    {"+", prim_add},
-    {"-", prim_sub},
-    {"*", prim_mul},
-    {"/", prim_div},
-
-    // special forms
-    {"quote", prim_quote},
-    {"eval", prim_eval}, 
-    {"apply", prim_apply}, 
-    {"lambda", prim_lambda},
-    {"if", prim_if},
-    */
 
     {"", NULL}
 };
@@ -109,6 +76,16 @@ DEF_TYPE_PREDICATE(is_applicative)
 obj_t* $quote(obj_t* obj, obj_t* env) 
 { 
     return car(obj);
+}
+
+obj_t* $eq(obj_t* obj, obj_t* env)
+{
+    return is_eq(car(obj), car(cdr(obj))) ? KTRUE : KFALSE;
+}
+
+obj_t* $equal(obj_t* obj, obj_t* env)
+{
+    return is_equal(car(obj), car(cdr(obj))) ? KTRUE : KFALSE;
 }
 
 static obj_t* eval(obj_t* obj, obj_t* env);
@@ -164,7 +141,7 @@ static obj_t* eval(obj_t* obj, obj_t* env)
             fprintf(stderr, "ERROR: f is not a applicative or operative\n");
             assert(0);  // bad f
         }
-    } else
+    } else 
         return obj;
 }
 

@@ -357,30 +357,28 @@ obj_t* cdr(obj_t* obj)
     return obj->data.pair.cdr;
 }
 
-obj_t* is_eq(obj_t* a, obj_t* b)
+int is_eq(obj_t* a, obj_t* b)
 {
-    if (is_immediate(a)) {
-        return a == b ? KTRUE : KFALSE;
-    } else if (a->type == b->type) {
+    if (is_immediate(a) && is_immediate(b)) {
+        return a == b;
+    } else if (!is_immediate(a) && !is_immediate(b) && a->type == b->type) {
         switch (a->type) {
         case SYMBOL_OBJ:
-            return a->data.symbol == b->data.symbol ? KTRUE : KFALSE;
+            return a->data.symbol == b->data.symbol;
         case NUMBER_OBJ:
-            return a->data.number == b->data.number ? KTRUE : KFALSE;
+            return a->data.number == b->data.number;
         default:    
-            return a == b ? KTRUE : KFALSE;
+            return a == b;
         }
     }
-    return KFALSE;
+    return 0;
 }
 
-obj_t* is_equal(obj_t* a, obj_t* b)
+int is_equal(obj_t* a, obj_t* b)
 {
-    if (is_pair(a) && is_pair(b)) {
-        int car_eq = is_equal(car(a), car(b)) == KTRUE;
-        int cdr_eq = is_equal(cdr(a), cdr(b)) == KTRUE;
-        return (car_eq && cdr_eq) ? KTRUE : KFALSE;
-    } else
+    if (is_pair(a) && is_pair(b))
+        return is_equal(car(a), car(b)) && is_equal(cdr(a), cdr(b));
+    else
         return is_eq(a, b);
 }
 
@@ -412,7 +410,7 @@ obj_t* env_define(obj_t* env, obj_t* symbol, obj_t* value)
         obj_t* prev = plist;
         while (is_pair(plist)) {
             obj_t* pair = car(plist);
-            if (is_eq(symbol, car(pair)) == KTRUE)
+            if (is_eq(symbol, car(pair)))
                 break;
             prev = plist;
             plist = cdr(plist);
@@ -440,7 +438,7 @@ static obj_t* assq(obj_t* key, obj_t* plist)
 {
     while (is_pair(plist)) {
         obj_t* pair = car(plist);
-        if (is_eq(key, (car(pair))) == KTRUE) {
+        if (is_eq(key, car(pair))) {
             return pair;
         }
         plist = cdr(plist);

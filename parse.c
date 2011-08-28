@@ -108,8 +108,15 @@ obj_t* parse_list(const char** pp)
     else
         ADVANCE();
 
-    if (PEEK(0) == ')')
+    while (isspace(PEEK(0)))
+        ADVANCE();
+    if (PEEK(0) == 0)
+        PARSE_ERROR("Unexpected NULL character");
+
+    if (PEEK(0) == ')') {
+        ADVANCE();
         return KNULL;  // empty list
+    }
     else {
         // EXPR+
         obj_t* root = KNULL;
