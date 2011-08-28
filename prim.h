@@ -24,6 +24,8 @@ obj_t* $define(obj_t* obj, obj_t* env);
 obj_t* $eval(obj_t* obj, obj_t* env);
 obj_t* $if(obj_t* obj, obj_t* env);
 obj_t* $cons(obj_t* obj, obj_t* env);
+obj_t* $set_car(obj_t* obj, obj_t* env);
+obj_t* $set_cdr(obj_t* obj, obj_t* env);
 
 // pair stuff
 /*

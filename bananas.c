@@ -114,11 +114,12 @@ int main(int argc, char* argv[])
         // dump output from read
         // dump(n, 0); printf("\n");
 
-        ref(n);
         free(line);
-        obj_t* r = $eval(cons(n, KNULL), repl_env);
+        obj_t* eval_list = cons(n, KNULL);
+        ref(eval_list);
+        obj_t* r = $eval(eval_list, repl_env);
         ref(r);
-        unref(n);
+        unref(eval_list);
         printf("  ");
         dump(r, 0);
         printf("\n");

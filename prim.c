@@ -29,6 +29,8 @@ static prim_info_t s_prim_infos[] = {
     {"$define!", $define, 0}, 
     {"$if", $if, 0},
     {"cons", $cons, 1},
+    {"set-car!", $set_car, 1},
+    {"set-cdr!", $set_cdr, 1},
 
     {"", NULL}
 };
@@ -200,6 +202,18 @@ obj_t* $if(obj_t* obj, obj_t* env)
 obj_t* $cons(obj_t* obj, obj_t* env)
 {
     return cons(car(obj), car(cdr(obj)));
+}
+
+obj_t* $set_car(obj_t* obj, obj_t* env)
+{
+    set_car(car(obj), car(cdr(obj)));
+    return KINERT;
+}
+
+obj_t* $set_cdr(obj_t* obj, obj_t* env)
+{
+    set_cdr(car(obj), car(cdr(obj)));
+    return KINERT;
 }
 
 /*

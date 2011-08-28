@@ -56,9 +56,8 @@ Core types and primitive features
 * $if
 * TODO: copy-es-immutable - lets see how far I can get without this...
 * cons
-
-* TODO: set-car! - DONE, return nil, instead of #inert
-* TODO: set-cdr! - DONE, return nil, instead of #inert
+* set-car!
+* set-cdr!
 * TODO: environment?
 * TODO: make-env - create an env with an optional parent env
 
