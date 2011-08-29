@@ -102,6 +102,8 @@ static void destroy_obj(obj_t* obj)
         unref(obj->data.compound_operative.body);
         unref(obj->data.compound_operative.static_env);
         break;
+    case APPLICATIVE_OBJ:
+        unref(obj->data.applicative.operative);
     default:
         break;
     }
