@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
         obj_t* n = read(line);
 
         // dump output from read
-        // dump(n, 0); printf("\n");
+        dump(n, 0); printf("\n");
 
         free(line);
         obj_t* eval_list = cons(n, KNULL);

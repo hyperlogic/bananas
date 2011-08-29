@@ -35,6 +35,10 @@ static prim_info_t s_prim_infos[] = {
     {"$vau", $vau, 0},
     {"wrap", $wrap, 1},
     {"unwrap", $unwrap, 1},
+    {"+", $add, 1},
+    {"-", $sub, 1},
+    {"*", $mul, 1},
+    {"/", $div, 1},
 
     {"", NULL}
 };
@@ -113,14 +117,13 @@ static obj_t* mapcar_eval(obj_t* obj, obj_t* env)
     obj_t* result = KNULL;
     obj_t* a = KNULL;
     while (is_pair(obj)) {
-        obj_t* pair = cons(KNULL, KNULL);
+        obj_t* pair = cons(eval(car(obj), env), KNULL);
         if (is_null(a)) {
             result = pair;
             a = pair;
         } else {
             set_cdr(a, pair);
         }
-        set_car(pair, eval(car(obj), env));
         obj = cdr(obj);
         a = pair;
     }
@@ -131,11 +134,14 @@ static obj_t* eval(obj_t* obj, obj_t* env)
 {
     assert(obj);
     assert(is_environment(env));
-    if (is_symbol(obj))
+
+    if (is_symbol(obj)) {
         return env_lookup(env, obj);
-    else if (is_pair(obj)) {
+    } else if (is_pair(obj)) {
         obj_t* f = eval(car(obj), env);
+        ref(f);
         obj_t* d = cdr(obj);
+        obj_t* result = KNULL;
         if (is_operative(f)) {
             if (is_prim_operative(f)) {
                 return f->data.prim_operative(d, env);
@@ -145,32 +151,34 @@ static obj_t* eval(obj_t* obj, obj_t* env)
                 obj_t* eformal = f->data.compound_operative.eformal;
                 obj_t* body = f->data.compound_operative.body;
                 obj_t* static_env = f->data.compound_operative.static_env;
-
                 obj_t* local_env = make_environment(KNULL, static_env);
                 ref(local_env);
                 match(formals, d, local_env);
                 if (is_symbol(eformal))
                     env_define(local_env, eformal, env);
-                obj_t* result = eval(body, local_env);
+                result = eval(body, local_env);
                 unref(local_env);
-                return result;
             }
         } else if (is_applicative(f)) {
             // let dd be the evaluated arguments d in env
             obj_t* dd = mapcar_eval(d, env);
             ref(dd);
-
             // let ff be the underlying operative of f
             obj_t* ff = f->data.applicative.operative;
-
+            ref(ff);
             // return eval cons(f' d') in env
-            obj_t* result = eval(cons(ff, dd), env);
+            obj_t* ops = cons(ff, dd);
+            ref(ops);
+            result = eval(ops, env);
+            unref(ops);
+            unref(ff);
             unref(dd);
-            return result;
         } else {
             fprintf(stderr, "ERROR: f is not a applicative or operative\n");
             assert(0);  // bad f
         }
+        unref(f);
+        return result;
     } else 
         return obj;
 }
@@ -268,77 +276,13 @@ obj_t* $unwrap(obj_t* obj, obj_t* env)
     return car(obj)->data.applicative.operative;
 }
 
-/*
-//
-// pair stuff
-//
-
-WRAP_FEXPR2(cons)
-WRAP_FEXPR1(car)
-WRAP_FEXPR1(cdr)
-WRAP_FEXPR1(cadr)
-WRAP_FEXPR2(assoc)
-WRAP_FEXPR2(set_car)
-WRAP_FEXPR2(set_cdr)
-
-//
-// env stuff
-//
-obj_t* prim_curr_env(obj_t* obj, obj_t* env)
-{
-    return env;
-}
-
-obj_t* prim_make_env(obj_t* obj, obj_t* env)
-{
-    obj_t* parent;
-    if (is_nil(obj))
-        parent = make_nil();
-    else
-        parent = eval(car(obj), env);
-    ref(parent);
-    obj_t* result = make_env(make_nil(), parent);
-    unref(parent);
-    return result;
-}
-
-obj_t* prim_def(obj_t* obj, obj_t* env)
-{
-    obj_t* symbol = car(obj);
-    obj_t* value = eval(cadr(obj), env);
-    ref(value);
-    obj_t* result = def(symbol, value, env);
-    unref(value);
-    return result;
-}
-
-obj_t* prim_defined(obj_t* obj, obj_t* env)
-{
-    obj_t* symbol = eval(car(obj), env);
-    ref(symbol);
-    obj_t* result = defined(symbol, env);
-    unref(symbol);
-    return result;
-}
-
-//
-// equality
-//
-
-WRAP_FEXPR2(is_eq)
-WRAP_FEXPR2(is_equal)
-
-//
-// math
-//
-
 #define MATH_PRIM(name, op)                     \
-obj_t* prim_##name(obj_t* obj, obj_t* env)      \
+obj_t* $##name(obj_t* obj, obj_t* env)          \
 {                                               \
     obj_t* root = obj;                          \
     double accum;                               \
     do {                                        \
-        obj_t* arg = eval(car(obj), env);       \
+        obj_t* arg = car(obj);                  \
         ref(arg);                               \
         assert(is_number(arg));                 \
         if (obj == root)                        \
@@ -347,7 +291,7 @@ obj_t* prim_##name(obj_t* obj, obj_t* env)      \
             accum op arg->data.number;          \
         unref(arg);                             \
         obj = cdr(obj);                         \
-    } while (!is_nil(obj));                     \
+    } while (is_pair(obj));                     \
     return make_number(accum);                  \
 }
 
@@ -355,62 +299,3 @@ MATH_PRIM(add, +=)
 MATH_PRIM(sub, -=)
 MATH_PRIM(mul, *=)
 MATH_PRIM(div, /=)
-
-//
-// special forms
-//
-
-obj_t* prim_eval(obj_t* obj, obj_t* env)
-{
-    obj_t* expr = eval(car(obj), env);
-    ref(expr);
-    if (is_pair(cdr(obj))) {
-        obj_t* env_arg = eval(cadr(obj), env);
-        ref(env_arg);
-        obj_t* result = eval(expr, env_arg);
-        unref(env_arg);
-        unref(expr);
-        return result;
-    }
-    else {
-        obj_t* result = eval(expr, env);
-        unref(expr);
-        return result;
-    }
-}
-
-obj_t* prim_apply(obj_t* obj, obj_t* env)
-{
-    obj_t* args = car(obj);
-    if (!is_nil(cdr(obj)))
-        return apply(args, cadr(obj));
-    else
-        return apply(args, env);
-}
-
-static void capture_closure(obj_t* local_env, obj_t* static_env, obj_t* args, obj_t* body)
-{
-    if (is_nil(body))
-        return;
-
-    if (body->type == SYMBOL_OBJ && is_nil(member(body, args))) {
-        def(body, eval(body, static_env), local_env);
-    } else if (body->type == PAIR_OBJ) {
-        capture_closure(local_env, static_env, args, car(body));
-        capture_closure(local_env, static_env, args, cdr(body));
-    }
-}
-
-obj_t* prim_lambda(obj_t* n, obj_t* env)
-{
-    obj_t* args = car(n);
-    obj_t* body = cadr(n);
-    obj_t* local_env = make_env(make_nil(), make_nil());
-
-    // evaluates symbols in the body using the static_env.
-    // these values are then captured in the local_env.
-    capture_closure(local_env, env, args, body);
-
-    return make_closure(args, body, local_env);
-}
-*/

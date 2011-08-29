@@ -57,14 +57,14 @@ static obj_t* pool_alloc()
 
     assert(g_num_used_objs + g_num_free_objs == MAX_OBJS);
 
-    //fprintf(stderr, "ALLOC obj %p\n", obj);
+    fprintf(stderr, "ALLOC obj %p\n", obj);
 
     return obj;
 }
 
 static void pool_free(obj_t* obj)
 {
-    //fprintf(stderr, "FREE  obj %p\n", obj);
+    fprintf(stderr, "FREE  obj %p\n", obj);
 
     assert(obj);
 
