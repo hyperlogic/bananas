@@ -39,6 +39,10 @@ static prim_info_t s_prim_infos[] = {
     {"-", $sub, 1},
     {"*", $mul, 1},
     {"/", $div, 1},
+    {">?", $gt, 1},
+    {">=?", $gteq, 1},
+    {"<?", $lt, 1},
+    {"<=?", $lteq, 1},
 
     {"", NULL}
 };
@@ -293,3 +297,18 @@ MATH_PRIM(add, +=)
 MATH_PRIM(sub, -=)
 MATH_PRIM(mul, *=)
 MATH_PRIM(div, /=)
+
+#define MATH_CMP_PRIM(name, op)                                 \
+obj_t* $##name(obj_t* obj, obj_t* env)                          \
+{                                                               \
+    obj_t* a = obj_car_deny(obj);                               \
+    assert(obj_is_number(a));                                   \
+    obj_t* d = obj_cdr_deny(obj);                               \
+    assert(obj_is_number(d));                                   \
+    return a->data.number op a->data.number ? KTRUE : KFALSE;   \
+}
+
+MATH_CMP_PRIM(gt, >)
+MATH_CMP_PRIM(gteq, >=)
+MATH_CMP_PRIM(lt, <)
+MATH_CMP_PRIM(lteq, <=)

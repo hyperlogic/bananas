@@ -17,6 +17,23 @@
 #define ADVANCE() *pp = *pp + 1
 #define PEEK(i) *(*pp + i)
 
+void parse_skip_whitespace(const char** pp)
+{
+    do {
+        while (isspace(PEEK(0)))
+            ADVANCE();
+
+        if (PEEK(0) == 0)
+            break;
+    
+        if (PEEK(0) == ';') {
+            do {
+                ADVANCE();
+            } while(PEEK(0) != '\n' && PEEK(0) != '\0');
+        }
+    } while(isspace(PEEK(0)));
+}
+
 obj_t* parse_symbol(const char** pp)
 {
     const char* start = *pp;
@@ -108,10 +125,7 @@ obj_t* parse_list(const char** pp)
     else
         ADVANCE();
 
-    while (isspace(PEEK(0)))
-        ADVANCE();
-    if (PEEK(0) == 0)
-        PARSE_ERROR("Unexpected NULL character");
+    parse_skip_whitespace(pp);
 
     if (PEEK(0) == ')') {
         ADVANCE();
@@ -135,10 +149,7 @@ obj_t* parse_list(const char** pp)
                 obj_unref(pair);
             }
 
-            while (isspace(PEEK(0)))
-                ADVANCE();
-            if (PEEK(0) == 0)
-                PARSE_ERROR("Unexpected NULL character");
+            parse_skip_whitespace(pp);
 
             if (PEEK(0) == '.' || PEEK(0) == ')')
                 break;
@@ -154,10 +165,7 @@ obj_t* parse_list(const char** pp)
             obj_unref(obj);
         }
 
-        while (isspace(PEEK(0)))
-            ADVANCE();
-        if (PEEK(0) == 0)
-            PARSE_ERROR("Unexpected NULL character");
+        parse_skip_whitespace(pp);
 
         if (PEEK(0) != ')')
             PARSE_ERROR("Expected ) after dotted expr");
@@ -184,8 +192,7 @@ obj_t* parse_quoted_expr(const char** pp)
 
 obj_t* parse_expr(const char** pp)
 {
-    while (isspace(PEEK(0)))
-        ADVANCE();
+    parse_skip_whitespace(pp);
 
     if (PEEK(0) == 0)
         PARSE_ERROR("Unexpected NULL character");
@@ -205,8 +212,7 @@ obj_t* parse_expr_sequence(const char** pp)
     obj_unref(symbol);
     obj_t* pair = root;
     while(1) {
-        while (isspace(PEEK(0)))
-            ADVANCE();
+        parse_skip_whitespace(pp);
         if (PEEK(0) == 0)
             break;
         obj_t* expr = parse_expr(pp);

@@ -32,5 +32,9 @@ obj_t* $add(obj_t* obj, obj_t* env);
 obj_t* $sub(obj_t* obj, obj_t* env);
 obj_t* $mul(obj_t* obj, obj_t* env);
 obj_t* $div(obj_t* obj, obj_t* env);
+obj_t* $gt(obj_t* obj, obj_t* env);
+obj_t* $gteq(obj_t* obj, obj_t* env);
+obj_t* $lt(obj_t* obj, obj_t* env);
+obj_t* $lteq(obj_t* obj, obj_t* env);
 
 #endif
