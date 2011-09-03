@@ -48,7 +48,7 @@ obj_t* parse_symbol(const char** pp)
             return KIGNORE;
     }
     
-    return make_symbol2(start, *pp);
+    return obj_make_symbol2(start, *pp);
 }
 
 obj_t* parse_number(const char** pp)
@@ -73,7 +73,7 @@ obj_t* parse_number(const char** pp)
     if (PEEK(0) == '.')
         ADVANCE();
     else
-        return make_number2(start, *pp);
+        return obj_make_number2(start, *pp);
     
     // [0-9]*
     while(1) {
@@ -83,7 +83,7 @@ obj_t* parse_number(const char** pp)
             break;
     }
 
-    return make_number2(start, *pp);
+    return obj_make_number2(start, *pp);
 }
 
 obj_t* parse_atom(const char** pp)
@@ -123,13 +123,16 @@ obj_t* parse_list(const char** pp)
         obj_t* pair = KNULL;
         do {
             obj_t* obj = parse_expr(pp);
-            if (is_null(pair)) {
-                root = cons(obj, KNULL);
+            if (obj_is_null(pair)) {
+                root = obj_cons_own(obj, KNULL);
+                obj_unref(obj);
                 pair = root;
             } else {
                 obj_t* temp = pair;
-                pair = cons(obj, KNULL);
-                set_cdr(temp, pair);
+                pair = obj_cons_own(obj, KNULL);
+                obj_unref(obj);
+                obj_set_cdr(temp, pair);
+                obj_unref(pair);
             }
 
             while (isspace(PEEK(0)))
@@ -147,7 +150,8 @@ obj_t* parse_list(const char** pp)
             ADVANCE();
             obj_t* obj = parse_expr(pp);
             assert(pair);
-            set_cdr(pair, obj);
+            obj_set_cdr(pair, obj);
+            obj_unref(obj);
         }
 
         while (isspace(PEEK(0)))
@@ -170,8 +174,12 @@ obj_t* parse_quoted_expr(const char** pp)
     else
         PARSE_ERROR("Expected a quote");
 
-    obj_t* e = parse_expr(pp);
-    return cons(make_symbol("$quote"), cons(e, KNULL));
+    obj_t* expr = parse_expr(pp);
+    obj_t* symbol = obj_make_symbol("$quote");
+    obj_t* result = obj_cons_own(symbol, obj_cons_deny(expr, KNULL));
+    obj_unref(symbol);
+    obj_unref(expr);
+    return result;
 }
 
 obj_t* parse_expr(const char** pp)
@@ -192,15 +200,19 @@ obj_t* parse_expr(const char** pp)
 obj_t* parse_expr_sequence(const char** pp)
 {
     // EXPR*
-    obj_t* root = cons(make_symbol("$sequence"), KNULL);
+    obj_t* symbol = obj_make_symbol("$sequence");
+    obj_t* root = obj_cons_own(symbol, KNULL);
+    obj_unref(symbol);
     obj_t* pair = root;
     while(1) {
         while (isspace(PEEK(0)))
             ADVANCE();
         if (PEEK(0) == 0)
             break;
-        set_cdr(pair, cons(parse_expr(pp), KNULL));
-        pair = cdr(pair);
+        obj_t* expr = parse_expr(pp);
+        obj_set_cdr(pair, obj_cons_deny(expr, KNULL));
+        obj_unref(expr);
+        pair = obj_cdr_deny(pair);
     }
     return root;
 }

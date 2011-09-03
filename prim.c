@@ -49,13 +49,20 @@ void prim_init()
     prim_info_t* p = s_prim_infos;
     while (p->prim) {
         if (p->wrap) {
-            obj_t* symbol = make_symbol(p->name);
-            obj_t* applicative = make_applicative(make_prim_operative(p->prim));
-            $define(cons(symbol, cons(applicative, KNULL)), g_env);
+            obj_t* symbol = obj_make_symbol(p->name);
+            obj_t* operative = obj_make_prim_operative(p->prim);
+            obj_t* applicative = obj_make_applicative(operative);
+            $define(obj_cons_deny(symbol, obj_cons_deny(applicative, KNULL)), g_env);
+            obj_unref(applicative);
+            obj_unref(operative);
+            obj_unref(symbol);
+
         } else {
-            obj_t* symbol = make_symbol(p->name);
-            obj_t* prim = make_prim_operative(p->prim);
-            $define(cons(symbol, cons(prim, KNULL)), g_env);
+            obj_t* symbol = obj_make_symbol(p->name);
+            obj_t* operative = obj_make_prim_operative(p->prim);
+            $define(obj_cons_deny(symbol, obj_cons_deny(operative, KNULL)), g_env);
+            obj_unref(operative);
+            obj_unref(symbol);
         }
         p++;
     }
@@ -64,10 +71,10 @@ void prim_init()
 #define DEF_TYPE_PREDICATE(name)                \
     obj_t* $##name(obj_t* obj, obj_t* env)      \
     {                                           \
-        while (is_pair(obj)) {                  \
-            if (! name(car(obj)))               \
+        while (obj_is_pair(obj)) {              \
+            if (!obj_##name(obj_car_deny(obj)))      \
                 return KFALSE;                  \
-            obj = cdr(obj);                     \
+            obj = obj_cdr_deny(obj);            \
         }                                       \
         return KTRUE;                           \
     }
@@ -85,195 +92,184 @@ DEF_TYPE_PREDICATE(is_applicative)
 
 obj_t* $quote(obj_t* obj, obj_t* env) 
 { 
-    return car(obj);
+    return obj_car_own(obj);
 }
 
 obj_t* $eq(obj_t* obj, obj_t* env)
 {
-    return is_eq(car(obj), car(cdr(obj))) ? KTRUE : KFALSE;
+    return obj_is_eq(obj_car_deny(obj), obj_car_deny(obj_cdr_deny(obj))) ? KTRUE : KFALSE;
 }
 
 obj_t* $equal(obj_t* obj, obj_t* env)
 {
-    return is_equal(car(obj), car(cdr(obj))) ? KTRUE : KFALSE;
+    return obj_is_equal(obj_car_deny(obj), obj_car_deny(obj_cdr_deny(obj))) ? KTRUE : KFALSE;
 }
 
-static obj_t* eval(obj_t* obj, obj_t* env);
+static obj_t* _eval(obj_t* obj, obj_t* env);
 
-static void match(obj_t* param_tree, obj_t* value_tree, obj_t* env)
+static void _match(obj_t* param_tree, obj_t* value_tree, obj_t* env)
 {
-    if (is_ignore(param_tree) || is_null(param_tree)) {
+    if (obj_is_ignore(param_tree) || obj_is_null(param_tree)) {
         return;
-    } else if (is_symbol(param_tree)) {
-        env_define(env, param_tree, value_tree);
-    } else if (is_pair(param_tree) && is_pair(value_tree)) {
-        match(car(param_tree), car(value_tree), env);
-        match(cdr(param_tree), cdr(value_tree), env);
+    } else if (obj_is_symbol(param_tree)) {
+        obj_env_define(env, param_tree, value_tree);
+    } else if (obj_is_pair(param_tree) && obj_is_pair(value_tree)) {
+        _match(obj_car_deny(param_tree), obj_car_deny(value_tree), env);
+        _match(obj_cdr_deny(param_tree), obj_cdr_deny(value_tree), env);
     }
 }
 
-static obj_t* mapcar_eval(obj_t* obj, obj_t* env)
+static obj_t* _mapcar_eval(obj_t* obj, obj_t* env)
 {
-    obj_t* result = KNULL;
-    obj_t* a = KNULL;
-    while (is_pair(obj)) {
-        obj_t* pair = cons(eval(car(obj), env), KNULL);
-        if (is_null(a)) {
-            result = pair;
-            a = pair;
-        } else {
-            set_cdr(a, pair);
-        }
-        obj = cdr(obj);
-        a = pair;
+    if (obj_is_null(obj))
+        return KNULL;
+    else if (obj_is_pair(obj)) {
+        obj_t* a = _eval(obj_car_deny(obj), env);
+        obj_t* d = _mapcar_eval(obj_cdr_deny(obj), env);
+        obj_t* result = obj_cons_own(a, d);
+        obj_unref(d);
+        obj_unref(a);
+        return result;
     }
-    return result;
+    else
+        return _eval(obj, env);
 }
 
-static obj_t* eval(obj_t* obj, obj_t* env)
+static obj_t* _eval(obj_t* obj, obj_t* env)
 {
     assert(obj);
-    assert(is_environment(env));
+    assert(obj_is_environment(env));
 
-    if (is_symbol(obj)) {
-        return env_lookup(env, obj);
-    } else if (is_pair(obj)) {
-        obj_t* f = eval(car(obj), env);
-        ref(f);
-        obj_t* d = cdr(obj);
+    if (obj_is_symbol(obj)) {
+        return obj_env_lookup_own(env, obj);
+    } else if (obj_is_pair(obj)) {
+        obj_t* f = _eval(obj_car_deny(obj), env);
+        obj_t* d = obj_cdr_deny(obj);
         obj_t* result = KNULL;
-        if (is_operative(f)) {
-            if (is_prim_operative(f)) {
+        if (obj_is_operative(f)) {
+            if (obj_is_prim_operative(f)) {
                 return f->data.prim_operative(d, env);
             } else {
-                assert(is_compound_operative(f));
+                assert(obj_is_compound_operative(f));
                 obj_t* formals = f->data.compound_operative.formals;
                 obj_t* eformal = f->data.compound_operative.eformal;
                 obj_t* body = f->data.compound_operative.body;
                 obj_t* static_env = f->data.compound_operative.static_env;
-                obj_t* local_env = make_environment(KNULL, static_env);
-                ref(local_env);
-                match(formals, d, local_env);
-                if (is_symbol(eformal))
-                    env_define(local_env, eformal, env);
-                result = eval(body, local_env);
-                unref(local_env);
+                obj_t* local_env = obj_make_environment(KNULL, static_env);
+                _match(formals, d, local_env);
+                if (obj_is_symbol(eformal))
+                    obj_env_define(local_env, eformal, env);
+                result = _eval(body, local_env);
+                obj_unref(local_env);
             }
-        } else if (is_applicative(f)) {
+        } else if (obj_is_applicative(f)) {
             // let dd be the evaluated arguments d in env
-            obj_t* dd = mapcar_eval(d, env);
-            ref(dd);
+            obj_t* dd = _mapcar_eval(d, env);
             // let ff be the underlying operative of f
             obj_t* ff = f->data.applicative.operative;
-            ref(ff);
             // return eval cons(f' d') in env
-            obj_t* ops = cons(ff, dd);
-            ref(ops);
-            result = eval(ops, env);
-            unref(ops);
-            unref(ff);
-            unref(dd);
+            obj_t* ops = obj_cons_own(ff, dd);
+            result = _eval(ops, env);
+            obj_unref(ops);
+            obj_unref(dd);
         } else {
             fprintf(stderr, "ERROR: f is not a applicative or operative\n");
             assert(0);  // bad f
         }
-        unref(f);
+        obj_unref(f);
         return result;
-    } else 
+    } else {
+        obj_ref(obj);
         return obj;
+    }
 }
 
 obj_t* $define(obj_t* obj, obj_t* env)
 {
-    obj_t* param_tree = car(obj);
-    obj_t* value_tree = eval(car(cdr(obj)), env);
-    ref(value_tree);
-    match(param_tree, value_tree, env);
-    unref(value_tree);
+    obj_t* param_tree = obj_car_deny(obj);
+    obj_t* value_tree = _eval(obj_car_deny(obj_cdr_deny(obj)), env);
+    _match(param_tree, value_tree, env);
+    obj_unref(value_tree);
     return KINERT;
 }
 
 obj_t* $eval(obj_t* obj, obj_t* env)
 {
-    obj_t* a = car(obj);
-    obj_t* d = cdr(obj);
-    if (is_pair(d))
-        return eval(a, car(cdr(obj)));
+    obj_t* a = obj_car_deny(obj);
+    obj_t* d = obj_cdr_deny(obj);
+    if (obj_is_pair(d))
+        return _eval(a, obj_car_deny(obj_cdr_deny(obj)));
     else
-        return eval(a, env);
+        return _eval(a, env);
 }
 
 obj_t* $if(obj_t* obj, obj_t* env)
 {
-    obj_t* expr = eval(car(obj), env);
-    ref(expr);
-    if (!is_boolean(expr)) {
-        unref(expr);
+    obj_t* expr = _eval(obj_car_deny(obj), env);
+    if (!obj_is_boolean(expr)) {
+        obj_unref(expr);
         fprintf(stderr, "Error: result of $if expression is not a boolean\n");
         assert(0);
     }
-    obj_t* true_body = car(cdr(obj));
-    obj_t* else_body = car(cdr(cdr(obj)));
-    obj_t* result;
+    obj_t* true_body = obj_car_deny(obj_cdr_deny(obj));
+    obj_t* else_body = obj_car_deny(obj_cdr_deny(obj_cdr_deny(obj)));
     if (expr == KTRUE)
-        result = eval(true_body, env);
+        return _eval(true_body, env);
     else
-        result = eval(else_body, env);
-    unref(expr);
-    return result;
+        return _eval(else_body, env);
 }
 
 obj_t* $cons(obj_t* obj, obj_t* env)
 {
-    return cons(car(obj), car(cdr(obj)));
+    return obj_cons_own(obj_car_deny(obj), obj_car_deny(obj_cdr_deny(obj)));
 }
 
 obj_t* $set_car(obj_t* obj, obj_t* env)
 {
-    set_car(car(obj), car(cdr(obj)));
+    obj_set_car(obj_car_deny(obj), obj_car_deny(obj_cdr_deny(obj)));
     return KINERT;
 }
 
 obj_t* $set_cdr(obj_t* obj, obj_t* env)
 {
-    set_cdr(car(obj), car(cdr(obj)));
+    obj_set_cdr(obj_car_deny(obj), obj_car_deny(obj_cdr_deny(obj)));
     return KINERT;
 }
 
 obj_t* $make_environment(obj_t* obj, obj_t* env)
 {
     obj_t* parent;
-    if (is_null(obj))
+    if (obj_is_null(obj))
         parent = KNULL;
     else
-        parent = car(obj);
-    ref(parent);
-    obj_t* result = make_environment(KNULL, parent);
-    unref(parent);
-    return result;
+        parent = obj_car_deny(obj);
+    return obj_make_environment(KNULL, parent);
 }
 
 obj_t* $vau(obj_t* obj, obj_t* env)
 {
-    return make_compound_operative(car(obj), car(cdr(obj)), car(cdr(cdr(obj))), env);
+    return obj_make_compound_operative(obj_car_deny(obj), obj_car_deny(obj_cdr_deny(obj)), 
+                                       obj_car_deny(obj_cdr_deny(obj_cdr_deny(obj))), env);
 }
 
 obj_t* $wrap(obj_t* obj, obj_t* env)
 {
-    if (!is_operative(car(obj))) {
+    if (!obj_is_operative(obj_car_deny(obj))) {
         fprintf(stderr, "ERROR: only operatives can be wrapped\n");
         assert(0);
     }
-    return make_applicative(car(obj));
+    return obj_make_applicative(obj_car_deny(obj));
 }
 
 obj_t* $unwrap(obj_t* obj, obj_t* env)
 {
-    if (!is_applicative(car(obj))) {
+    if (!obj_is_applicative(obj_car_deny(obj))) {
         fprintf(stderr, "ERROR: only applicatives can be unwrapped\n");
         assert(0);
     }
-    return car(obj)->data.applicative.operative;
+    obj_t* result = obj_car_deny(obj)->data.applicative.operative;
+    obj_ref(result);
+    return result;
 }
 
 #define MATH_PRIM(name, op)                     \
@@ -282,17 +278,15 @@ obj_t* $##name(obj_t* obj, obj_t* env)          \
     obj_t* root = obj;                          \
     double accum;                               \
     do {                                        \
-        obj_t* arg = car(obj);                  \
-        ref(arg);                               \
-        assert(is_number(arg));                 \
+        obj_t* arg = obj_car_deny(obj);         \
+        assert(obj_is_number(arg));             \
         if (obj == root)                        \
             accum = arg->data.number;           \
         else                                    \
             accum op arg->data.number;          \
-        unref(arg);                             \
-        obj = cdr(obj);                         \
-    } while (is_pair(obj));                     \
-    return make_number(accum);                  \
+        obj = obj_cdr_deny(obj);                \
+    } while (obj_is_pair(obj));                 \
+    return obj_make_number(accum);              \
 }
 
 MATH_PRIM(add, +=)

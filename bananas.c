@@ -87,19 +87,19 @@ void test_suite()
 
 int main(int argc, char* argv[])
 {
-    init();
+    obj_init();
 
 #ifndef KERNEL
     test_suite();
 #endif
 
-    obj_t* repl_env = make_environment(KNULL, g_env);
-    ref(repl_env);
-
-    char* line = 0;
+    obj_t* repl_env = obj_make_environment(KNULL, g_env);
+    char* line = NULL;
     while (1) {
 
+#ifdef REF_COUNT_DEBUG
         printf("  %d used objs\n", g_num_used_objs);
+#endif
 
         line = readline("\\O_o/ > ");
         if (strcmp(line, "quit") == 0)
@@ -109,23 +109,17 @@ int main(int argc, char* argv[])
         }
         if (line && *line)
             add_history(line);
-        obj_t* n = read(line);
 
-        // dump output from read
-        dump(n, 0); printf("\n");
-
+        obj_t* result = obj_eval_str(line, repl_env);
         free(line);
-        obj_t* eval_list = cons(n, KNULL);
-        ref(eval_list);
-        obj_t* r = $eval(eval_list, repl_env);
-        ref(r);
-        unref(eval_list);
+
         printf("  ");
-        dump(r, 0);
+        obj_dump(result, 0);
         printf("\n");
-        unref(r);
+
+        obj_unref(result);
     }
-    unref(repl_env);
+    obj_unref(repl_env);
 
     return 0;
 }

@@ -1,3 +1,4 @@
+// (setq show-trailing-whitespace t)
 #ifndef OBJ_H
 #define OBJ_H
 
@@ -26,12 +27,12 @@ typedef struct {
     struct obj_struct* operative;
 } applicative_t;
 
-enum obj_type { SYMBOL_OBJ = 0, PAIR_OBJ, NUMBER_OBJ, ENV_OBJ, 
+enum obj_type { SYMBOL_OBJ = 0, PAIR_OBJ, NUMBER_OBJ, ENV_OBJ,
                 PRIM_OPERATIVE_OBJ, COMPOUND_OPERATIVE_OBJ, APPLICATIVE_OBJ };
 
 // the last 5 bits are used to indicate immediate values.
-enum obj_immedate_tags { IMM_TAG = 1, INERT_TAG = 2, 
-                         IGNORE_TAG = 4, TRUE_TAG = 8, 
+enum obj_immedate_tags { IMM_TAG = 1, INERT_TAG = 2,
+                         IGNORE_TAG = 4, TRUE_TAG = 8,
                          FALSE_TAG = 16, NULL_TAG = 32, TAG_MASK = 63 };
 
 // immediate constants
@@ -63,75 +64,64 @@ extern int g_num_used_objs;
 extern obj_t* g_env;
 
 // ref counting
-void ref(obj_t* obj);
-void unref(obj_t* obj);
+void obj_ref(obj_t* obj);
+void obj_unref(obj_t* obj);
 
-// obj makers
-obj_t* make_symbol(const char* str);
-obj_t* make_symbol2(const char* start, const char* end);
-obj_t* make_number(double num);
-obj_t* make_number2(const char* start, const char* end);
-obj_t* make_pair(obj_t* car, obj_t* cdr);
-obj_t* make_environment(obj_t* plist, obj_t* parent);
-obj_t* make_prim_operative(prim_operative_t prim);
-obj_t* make_compound_operative(obj_t* formals, obj_t* eformal, obj_t* body, obj_t* static_env);
-obj_t* make_applicative(obj_t* operative);
+// obj makers, returned objs have a refcount of 1.
+obj_t* obj_make_symbol(const char* str);
+obj_t* obj_make_symbol2(const char* start, const char* end);
+obj_t* obj_make_number(double num);
+obj_t* obj_make_number2(const char* start, const char* end);
+obj_t* obj_make_pair(obj_t* car, obj_t* cdr);
+obj_t* obj_make_environment(obj_t* plist, obj_t* parent);
+obj_t* obj_make_prim_operative(prim_operative_t prim);
+obj_t* obj_make_compound_operative(obj_t* formals, obj_t* eformal, obj_t* body, obj_t* static_env);
+obj_t* obj_make_applicative(obj_t* operative);
 
 // obj type predicates
-int is_immediate(obj_t* obj);
-int is_inert(obj_t* obj);
-int is_ignore(obj_t* obj);
-int is_boolean(obj_t* obj);
-int is_null(obj_t* obj);
-int is_symbol(obj_t* obj);
-int is_number(obj_t* obj);
-int is_pair(obj_t* obj);
-int is_environment(obj_t* obj);
-int is_prim_operative(obj_t* obj);
-int is_compound_operative(obj_t* obj);
-int is_operative(obj_t* obj);
-int is_applicative(obj_t* obj);
+int obj_is_immediate(obj_t* obj);
+int obj_is_inert(obj_t* obj);
+int obj_is_ignore(obj_t* obj);
+int obj_is_boolean(obj_t* obj);
+int obj_is_null(obj_t* obj);
+int obj_is_symbol(obj_t* obj);
+int obj_is_number(obj_t* obj);
+int obj_is_pair(obj_t* obj);
+int obj_is_environment(obj_t* obj);
+int obj_is_prim_operative(obj_t* obj);
+int obj_is_compound_operative(obj_t* obj);
+int obj_is_operative(obj_t* obj);
+int obj_is_applicative(obj_t* obj);
 
-// helpers
-obj_t* cons(obj_t* a, obj_t* b);
-obj_t* car(obj_t* obj);
-obj_t* cdr(obj_t* obj);
-obj_t* set_car(obj_t* obj, obj_t* value);
-obj_t* set_cdr(obj_t* obj, obj_t* value);
+// ownership is passed on to caller.
+obj_t* obj_cons_own(obj_t* a, obj_t* b);
+obj_t* obj_car_own(obj_t* obj);
+obj_t* obj_cdr_own(obj_t* obj);
 
-int is_eq(obj_t* a, obj_t* b);
-int is_equal(obj_t* a, obj_t* b);
+// ownership is NOT passed on to caller
+obj_t* obj_cons_deny(obj_t* a, obj_t* b);  // pair has refcount of 0.
+obj_t* obj_car_deny(obj_t* obj);
+obj_t* obj_cdr_deny(obj_t* obj);
 
-obj_t* env_define(obj_t* env, obj_t* symbol, obj_t* value);
-obj_t* env_lookup(obj_t* env, obj_t* symbol);
+// old value is unrefed and new value refed (owned by obj pair)
+void obj_set_car(obj_t* obj, obj_t* value);
+void obj_set_cdr(obj_t* obj, obj_t* value);
 
-/*
-// pair functions
-obj_t* cadr(obj_t* obj);
-obj_t* list1(obj_t* a);
-obj_t* list2(obj_t* a, obj_t* b);
-obj_t* list3(obj_t* a, obj_t* b, obj_t* c);
-obj_t* member(obj_t* obj, obj_t* lst);
-obj_t* assoc(obj_t* obj, obj_t* plist);
+int obj_is_eq(obj_t* a, obj_t* b);
+int obj_is_equal(obj_t* a, obj_t* b);
 
-// equality
-obj_t* is_eq(obj_t* a, obj_t* b);
-obj_t* is_equal(obj_t* a, obj_t* b);
+obj_t* obj_env_lookup_deny(obj_t* env, obj_t* symbol);
+obj_t* obj_env_lookup_own(obj_t* env, obj_t* symbol);
 
-// env functions
-obj_t* def(obj_t* symbol, obj_t* value, obj_t* env);
-obj_t* defined(obj_t* symbol, obj_t* env);  // NOTE: this returns value not #t
-
-// special forms
-obj_t* quote(obj_t* obj);
-obj_t* eval(obj_t* obj, obj_t* env);
-obj_t* apply(obj_t* obj, obj_t* env);
-*/
+void obj_env_define(obj_t* env, obj_t* symbol, obj_t* value);
 
 // debug output
-void dump(obj_t* n, int to_stderr);
+void obj_dump(obj_t* n, int to_stderr);
+
+obj_t* obj_eval_expr(obj_t* obj, obj_t* env);
+obj_t* obj_eval_str(const char* str, obj_t* env);
 
 // interpreter init, this needs happen before any thing else.
-void init();
+void obj_init();
 
 #endif

@@ -1,3 +1,4 @@
+// (setq show-trailing-whitespace t)
 #include "obj.h"
 #include "parse.h"
 #include "symbol.h"
@@ -6,6 +7,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 // static object pool
 #define MAX_OBJS 8192
@@ -22,13 +24,13 @@ int g_num_used_objs = 0;
 // root environment
 obj_t* g_env = NULL;
 
-static obj_t* assq(obj_t* key, obj_t* plist);
+static obj_t* _assq_deny(obj_t* key, obj_t* plist);
 
 //
 // obj pool
 //
 
-static void pool_init()
+static void _pool_init()
 {
     // init obj pool
     int i;
@@ -39,7 +41,7 @@ static void pool_init()
     g_num_used_objs = 0;
 }
 
-static obj_t* pool_alloc()
+static obj_t* _pool_alloc()
 {
     // take from front of free list
     assert(g_free_objs);
@@ -57,14 +59,18 @@ static obj_t* pool_alloc()
 
     assert(g_num_used_objs + g_num_free_objs == MAX_OBJS);
 
+#ifdef REF_COUNT_DEBUG
     fprintf(stderr, "ALLOC obj %p\n", obj);
+#endif
 
     return obj;
 }
 
-static void pool_free(obj_t* obj)
+static void _pool_free(obj_t* obj)
 {
+#ifdef REF_COUNT_DEBUG
     fprintf(stderr, "FREE  obj %p\n", obj);
+#endif
 
     assert(obj);
 
@@ -84,26 +90,26 @@ static void pool_free(obj_t* obj)
     assert(g_num_used_objs + g_num_free_objs == MAX_OBJS);
 }
 
-static void destroy_obj(obj_t* obj)
+static void _destroy(obj_t* obj)
 {
-    assert(!is_immediate(obj));
+    assert(!obj_is_immediate(obj));
     switch (obj->type) {
     case PAIR_OBJ:
-        unref(obj->data.pair.car);
-        unref(obj->data.pair.cdr);
+        obj_unref(obj->data.pair.car);
+        obj_unref(obj->data.pair.cdr);
         break;
     case ENV_OBJ:
-        unref(obj->data.env.plist);
-        unref(obj->data.env.parent);
+        obj_unref(obj->data.env.plist);
+        obj_unref(obj->data.env.parent);
         break;
     case COMPOUND_OPERATIVE_OBJ:
-        unref(obj->data.compound_operative.formals);
-        unref(obj->data.compound_operative.eformal);
-        unref(obj->data.compound_operative.body);
-        unref(obj->data.compound_operative.static_env);
+        obj_unref(obj->data.compound_operative.formals);
+        obj_unref(obj->data.compound_operative.eformal);
+        obj_unref(obj->data.compound_operative.body);
+        obj_unref(obj->data.compound_operative.static_env);
         break;
     case APPLICATIVE_OBJ:
-        unref(obj->data.applicative.operative);
+        obj_unref(obj->data.applicative.operative);
     default:
         break;
     }
@@ -113,20 +119,20 @@ static void destroy_obj(obj_t* obj)
 // ref counting
 //
 
-void ref(obj_t* obj)
+void obj_ref(obj_t* obj)
 {
-    if (!is_immediate(obj))
+    if (!obj_is_immediate(obj))
         obj->ref_count++;
 }
 
-void unref(obj_t* obj)
+void obj_unref(obj_t* obj)
 {
-    if (!is_immediate(obj)) {
+    if (!obj_is_immediate(obj)) {
         obj->ref_count--;
         assert(obj->ref_count >= 0);
         if (obj->ref_count == 0) {
-            destroy_obj(obj);
-            pool_free(obj);
+            _destroy(obj);
+            _pool_free(obj);
         }
     }
 }
@@ -135,44 +141,44 @@ void unref(obj_t* obj)
 // obj makers
 //
 
-obj_t* make_symbol(const char* str)
+obj_t* obj_make_symbol(const char* str)
 {
     int len = strlen(str);
     int id = symbol_find(str, len);
     if (id < 0)
         id = symbol_add(str, len);
 
-    obj_t* obj = pool_alloc();
+    obj_t* obj = _pool_alloc();
     obj->type = SYMBOL_OBJ;
     obj->data.symbol = id;
-    obj->ref_count = 0;
+    obj->ref_count = 1;
     return obj;
 }
 
-obj_t* make_symbol2(const char* start, const char* end)
+obj_t* obj_make_symbol2(const char* start, const char* end)
 {
     int len = end - start;
     int id = symbol_find(start, len);
     if (id < 0)
         id = symbol_add(start, len);
 
-    obj_t* obj = pool_alloc();
+    obj_t* obj = _pool_alloc();
     obj->type = SYMBOL_OBJ;
     obj->data.symbol = id;
-    obj->ref_count = 0;
+    obj->ref_count = 1;
     return obj;
 }
 
-obj_t* make_number(double num)
+obj_t* obj_make_number(double num)
 {
-    obj_t* obj = pool_alloc();
+    obj_t* obj = _pool_alloc();
     obj->type = NUMBER_OBJ;
     obj->data.number = num;
-    obj->ref_count = 0;
+    obj->ref_count = 1;
     return obj;
 }
 
-obj_t* make_number2(const char* start, const char* end)
+obj_t* obj_make_number2(const char* start, const char* end)
 {
     double num = 0;
     int len = end - start;
@@ -183,64 +189,66 @@ obj_t* make_number2(const char* start, const char* end)
         num = atof(temp);
         free(temp);
     }
-    
-    return make_number(num);
+
+    return obj_make_number(num);
 }
 
-obj_t* make_pair(obj_t* car, obj_t* cdr)
+obj_t* obj_make_pair(obj_t* car, obj_t* cdr)
 {
-    ref(car);
-    ref(cdr);
-    obj_t* obj = pool_alloc();
+    obj_ref(car);
+    obj_ref(cdr);
+    obj_t* obj = _pool_alloc();
     obj->type = PAIR_OBJ;
     obj->data.pair.car = car;
     obj->data.pair.cdr = cdr;
-    obj->ref_count = 0;
+    obj->ref_count = 1;
     return obj;
 }
 
-obj_t* make_environment(obj_t* plist, obj_t* parent)
+obj_t* obj_make_environment(obj_t* plist, obj_t* parent)
 {
-    ref(plist);
-    ref(parent);
-    obj_t* obj = pool_alloc();
+    obj_ref(plist);
+    obj_ref(parent);
+    obj_t* obj = _pool_alloc();
     obj->type = ENV_OBJ;
     obj->data.env.plist = plist;
     obj->data.env.parent = parent;
-    obj->ref_count = 0;
+    obj->ref_count = 1;
     return obj;
 }
 
-obj_t* make_prim_operative(prim_operative_t prim)
+obj_t* obj_make_prim_operative(prim_operative_t prim)
 {
-    obj_t* obj = pool_alloc();
+    obj_t* obj = _pool_alloc();
     obj->type = PRIM_OPERATIVE_OBJ;
-    obj->data.prim_operative = prim;
+    obj->data.prim_operative = prim;  // prim is a c-function, no need to ref it.
+    obj->ref_count = 1;
     return obj;
 }
 
-obj_t* make_compound_operative(obj_t* formals, obj_t* eformal, obj_t* body, obj_t* static_env)
+obj_t* obj_make_compound_operative(obj_t* formals, obj_t* eformal, obj_t* body, obj_t* static_env)
 {
-    ref(formals);
-    ref(eformal);
-    ref(body);
-    ref(static_env);
-    obj_t* obj = pool_alloc();
+    obj_ref(formals);
+    obj_ref(eformal);
+    obj_ref(body);
+    obj_ref(static_env);
+    obj_t* obj = _pool_alloc();
     obj->type = COMPOUND_OPERATIVE_OBJ;
     obj->data.compound_operative.formals = formals;
     obj->data.compound_operative.eformal = eformal;
     obj->data.compound_operative.body = body;
     obj->data.compound_operative.static_env = static_env;
-    obj->ref_count = 0;
+    obj->ref_count = 1;
     return obj;
 }
 
-obj_t* make_applicative(obj_t* operative)
+obj_t* obj_make_applicative(obj_t* operative)
 {
-    ref(operative);
-    obj_t* obj = pool_alloc();
+    obj_ref(operative);
+    obj_t* obj = _pool_alloc();
     obj->type = APPLICATIVE_OBJ;
     obj->data.applicative.operative = operative;
+    obj->ref_count = 1;
     return obj;
 }
 
@@ -248,304 +256,225 @@ obj_t* make_applicative(obj_t* operative)
 // obj type predicates
 //
 
-int is_immediate(obj_t* obj)
+int obj_is_immediate(obj_t* obj)
 {
     assert(obj);
     return (long)obj & IMM_TAG;
 }
 
-int is_inert(obj_t* obj)
+int obj_is_inert(obj_t* obj)
 {
     assert(obj);
     return obj == KINERT;
 }
 
-int is_ignore(obj_t* obj)
+int obj_is_ignore(obj_t* obj)
 {
     assert(obj);
     return obj == KIGNORE;
 }
 
-int is_boolean(obj_t* obj)
+int obj_is_boolean(obj_t* obj)
 {
     assert(obj);
     return obj == KTRUE || obj == KFALSE;
 }
 
-int is_null(obj_t* obj)
+int obj_is_null(obj_t* obj)
 {
     assert(obj);
     return obj == KNULL;
 }
 
-int is_symbol(obj_t* obj)
+int obj_is_symbol(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == SYMBOL_OBJ;
+    return !obj_is_immediate(obj) && obj->type == SYMBOL_OBJ;
 }
 
-int is_number(obj_t* obj)
+int obj_is_number(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == NUMBER_OBJ;
+    return !obj_is_immediate(obj) && obj->type == NUMBER_OBJ;
 }
 
-int is_pair(obj_t* obj)
+int obj_is_pair(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == PAIR_OBJ && !is_null(obj);
+    return !obj_is_immediate(obj) && obj->type == PAIR_OBJ && !obj_is_null(obj);
 }
 
-int is_environment(obj_t* obj)
+int obj_is_environment(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == ENV_OBJ;
+    return !obj_is_immediate(obj) && obj->type == ENV_OBJ;
 }
 
-int is_prim_operative(obj_t* obj)
+int obj_is_prim_operative(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == PRIM_OPERATIVE_OBJ;
+    return !obj_is_immediate(obj) && obj->type == PRIM_OPERATIVE_OBJ;
 }
 
-int is_compound_operative(obj_t* obj)
+int obj_is_compound_operative(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == COMPOUND_OPERATIVE_OBJ;
+    return !obj_is_immediate(obj) && obj->type == COMPOUND_OPERATIVE_OBJ;
 }
 
-int is_operative(obj_t* obj)
+int obj_is_operative(obj_t* obj)
 {
     assert(obj);
-    return is_prim_operative(obj) || is_compound_operative(obj);
+    return obj_is_prim_operative(obj) || obj_is_compound_operative(obj);
 }
 
-int is_applicative(obj_t* obj)
+int obj_is_applicative(obj_t* obj)
 {
     assert(obj);
-    return !is_immediate(obj) && obj->type == APPLICATIVE_OBJ;
+    return !obj_is_immediate(obj) && obj->type == APPLICATIVE_OBJ;
 }
 
-obj_t* cons(obj_t* a, obj_t* b)
+obj_t* obj_cons_own(obj_t* a, obj_t* b)
 {
-    return make_pair(a, b);
+    return obj_make_pair(a, b);
 }
 
-obj_t* set_car(obj_t* obj, obj_t* value)
+obj_t* obj_car_own(obj_t* obj)
 {
-    assert(is_pair(obj));
-    ref(value);
-    unref(obj->data.pair.car);
-    obj->data.pair.car = value;
-    return KINERT;
+    assert(obj_is_pair(obj));
+    obj_t* result = obj->data.pair.car;
+    obj_ref(result);
+    return result;
 }
 
-obj_t* set_cdr(obj_t* obj, obj_t* value)
+obj_t* obj_cdr_own(obj_t* obj)
 {
-    assert(is_pair(obj));
-    ref(value);
-    unref(obj->data.pair.cdr);
-    obj->data.pair.cdr = value;
-    return KINERT;
+    assert(obj_is_pair(obj));
+    obj_t* result = obj->data.pair.cdr;
+    obj_ref(result);
+    return result;
 }
 
-obj_t* car(obj_t* obj)
+obj_t* obj_cons_deny(obj_t* a, obj_t* b)
 {
-    assert(is_pair(obj));
+    obj_t* result = obj_make_pair(a, b);
+    result->ref_count = 0;
+    return result;
+}
+
+obj_t* obj_car_deny(obj_t* obj)
+{
+    assert(obj_is_pair(obj));
     return obj->data.pair.car;
 }
 
-obj_t* cdr(obj_t* obj)
+obj_t* obj_cdr_deny(obj_t* obj)
 {
-    assert(is_pair(obj));
+    assert(obj_is_pair(obj));
     return obj->data.pair.cdr;
 }
 
-int is_eq(obj_t* a, obj_t* b)
+void obj_set_car(obj_t* obj, obj_t* value)
 {
-    if (is_immediate(a) && is_immediate(b)) {
+    assert(obj_is_pair(obj));
+    obj_ref(value);
+    obj_unref(obj->data.pair.car);
+    obj->data.pair.car = value;
+}
+
+void obj_set_cdr(obj_t* obj, obj_t* value)
+{
+    assert(obj_is_pair(obj));
+    obj_ref(value);
+    obj_unref(obj->data.pair.cdr);
+    obj->data.pair.cdr = value;
+}
+
+int obj_is_eq(obj_t* a, obj_t* b)
+{
+    if (obj_is_immediate(a) && obj_is_immediate(b)) {
         return a == b;
-    } else if (!is_immediate(a) && !is_immediate(b) && a->type == b->type) {
+    } else if (!obj_is_immediate(a) && !obj_is_immediate(b) && a->type == b->type) {
         switch (a->type) {
         case SYMBOL_OBJ:
             return a->data.symbol == b->data.symbol;
         case NUMBER_OBJ:
             return a->data.number == b->data.number;
-        default:    
+        default:
             return a == b;
         }
     }
     return 0;
 }
 
-int is_equal(obj_t* a, obj_t* b)
+int obj_is_equal(obj_t* a, obj_t* b)
 {
-    if (is_pair(a) && is_pair(b))
-        return is_equal(car(a), car(b)) && is_equal(cdr(a), cdr(b));
+    if (obj_is_pair(a) && obj_is_pair(b)) {
+        obj_t* a_head = obj_car_deny(a);
+        obj_t* a_tail = obj_cdr_deny(a);
+        obj_t* b_head = obj_car_deny(b);
+        obj_t* b_tail = obj_cdr_deny(b);
+        return obj_is_equal(a_head, b_head) && obj_is_equal(a_tail, b_tail);
+    }
     else
-        return is_eq(a, b);
+        return obj_is_eq(a, b);
 }
 
-obj_t* env_lookup(obj_t* env, obj_t* symbol)
+obj_t* obj_env_lookup_deny(obj_t* env, obj_t* symbol)
 {
-    assert(is_symbol(symbol));
-    assert(is_environment(env));
+    assert(obj_is_symbol(symbol));
+    assert(obj_is_environment(env));
 
-    obj_t* pair = assq(symbol, env->data.env.plist);
-    if (!is_null(pair))
-        return cdr(pair);
+    obj_t* pair = _assq_deny(symbol, env->data.env.plist);
+    if (!obj_is_null(pair)) {
+        return obj_cdr_deny(pair);
+    }
     else {
-        if (is_environment(env->data.env.parent))
-            return env_lookup(env->data.env.parent, symbol);
-        else
+        if (obj_is_environment(env->data.env.parent))
+            return obj_env_lookup_deny(env->data.env.parent, symbol);
+        else {
+
+            // AJT: REMOVE
+            fprintf(stderr, "Warning: could not find symbol \"%s\" in env\n", symbol_get(symbol->data.symbol));
+
             return KNULL;
+        }
     }
 }
 
-obj_t* env_define(obj_t* env, obj_t* symbol, obj_t* value)
+obj_t* obj_env_lookup_own(obj_t* env, obj_t* symbol)
 {
-    assert(is_symbol(symbol));
-    assert(is_environment(env));
+    obj_t* result = obj_env_lookup_deny(env, symbol);
+    obj_ref(result);
+    return result;
+}
 
-    obj_t* plist = env->data.env.plist;
-    if (is_pair(plist)) {
+void obj_env_define(obj_t* env, obj_t* symbol, obj_t* value)
+{
+    assert(obj_is_symbol(symbol));
+    assert(obj_is_environment(env));
 
-        // find symbol in plist.
-        obj_t* prev = plist;
-        while (is_pair(plist)) {
-            obj_t* pair = car(plist);
-            if (is_eq(symbol, car(pair)))
-                break;
-            prev = plist;
-            plist = cdr(plist);
-        }
-
-        if (is_pair(plist)) {
-            // found it. replace old cdr with new value.
-            set_cdr(car(plist), value);
-        } else {
-            // did not find it. so add a new property to the end.
-            set_cdr(prev, cons(cons(symbol, value), KNULL));
-        }
+    obj_t* pair = _assq_deny(symbol, env->data.env.plist);
+    if (obj_is_null(pair)) {
+        // did not find it. so add a new property to the beginning of the plist.
+        obj_t* plist = env->data.env.plist;
+        env->data.env.plist = obj_cons_own(obj_cons_deny(symbol, value), plist);
+        obj_unref(plist);
     } else {
-        // brand new plist.
-        obj_t* new_plist = cons(cons(symbol, value), KNULL);
-        ref(new_plist);
-        env->data.env.plist = new_plist;
+        // found it, change the value
+        obj_set_cdr(pair, value);
     }
-
-    return value;
 }
 
-
-static obj_t* assq(obj_t* key, obj_t* plist)
+static obj_t* _assq_deny(obj_t* key, obj_t* plist)
 {
-    while (is_pair(plist)) {
-        obj_t* pair = car(plist);
-        if (is_eq(key, car(pair))) {
-            return pair;
-        }
-        plist = cdr(plist);
+    while (obj_is_pair(plist)) {
+        if (obj_is_eq(key, obj_car_deny(obj_car_deny(plist))))
+            return obj_car_deny(plist);
+        plist = obj_cdr_deny(plist);
     }
     return KNULL;
 }
-
-/*
-//
-// pair functions
-//
-
-obj_t* cadr(obj_t* obj)
-{
-    return car(cdr(obj));
-}
-
-obj_t* list1(obj_t* a)
-{
-    return cons(a, make_nil());
-}
-
-obj_t* list2(obj_t* a, obj_t* b)
-{
-    return cons(a, cons(b, make_nil()));
-}
-
-obj_t* list3(obj_t* a, obj_t* b, obj_t* c)
-{
-    return cons(a, cons(b, cons(c, make_nil())));
-}
-
-obj_t* member(obj_t* obj, obj_t* lst)
-{
-    while (!is_nil(lst)) {
-        if (!is_nil(is_eq(obj, car(lst))))
-            return make_true();
-        lst = cdr(lst);
-    }
-    return make_nil();
-}
-
-//
-// equality
-//
-
-
-//
-// env functions
-//
-
-
-//
-// special forms
-//
-
-obj_t* eval(obj_t* obj, obj_t* env)
-{
-    assert(obj);
-    assert(is_env(env));
-    if (is_symbol(obj))
-        return defined(obj, env);
-    else if (is_pair(obj))
-        return apply(obj, env);
-    else
-        return obj;
-}
-
-obj_t* apply(obj_t* obj, obj_t* env)
-{
-    assert(is_pair(obj));
-    obj_t* f = eval(car(obj), env);
-    ref(f);
-    obj_t* args = cdr(obj);
-    assert(!is_immediate(f));
-    obj_t* result;
-    switch (f->type) {
-    case PRIM_OBJ:
-        result = f->data.prim(args, env);
-        break;
-    case CLOSURE_OBJ:
-    {
-        obj_t* local_env = make_env(make_nil(), f->data.closure.env);
-        obj_t* closure_args = f->data.closure.args;
-        while(!is_nil(args) && !is_nil(closure_args)) {
-            def(car(closure_args), eval(car(args), env), local_env);
-            args = cdr(args);
-            closure_args = cdr(closure_args);
-        }
-        obj_t* closure_body = f->data.closure.body;
-
-        // make sure to eval closure body with the local_env
-        result = eval(closure_body, local_env);
-        break;
-    }
-    default:
-        assert(0);  // illegal function type
-    }
-
-    unref(f);
-    return result;
-}
-*/
 
 //
 // debug output
@@ -559,9 +488,9 @@ obj_t* apply(obj_t* obj, obj_t* env)
             printf(args);                        \
     } while(0)
 
-void dump(obj_t* obj, int to_stderr)
+void obj_dump(obj_t* obj, int to_stderr)
 {
-    if (is_immediate(obj)) {
+    if (obj_is_immediate(obj)) {
         if (obj == KIGNORE)
             PRINTF("#ignore");
         else if (obj == KINERT)
@@ -577,37 +506,65 @@ void dump(obj_t* obj, int to_stderr)
     } else {
         switch (obj->type) {
         case NUMBER_OBJ:
+#ifdef REF_COUNT_DEBUG
+            PRINTF("{%d}%f", obj->ref_count, obj->data.number);
+#else
             PRINTF("%f", obj->data.number);
+#endif
             break;
         case SYMBOL_OBJ:
+#ifdef REF_COUNT_DEBUG
+            PRINTF("{%d}%s", obj->ref_count, symbol_get(obj->data.symbol));
+#else
             PRINTF("%s", symbol_get(obj->data.symbol));
+#endif
             break;
         case PAIR_OBJ:
+#ifdef REF_COUNT_DEBUG
+            PRINTF("{%d}(", obj->ref_count);
+#else
             PRINTF("(");
-            while (is_pair(obj)) {
-                dump(car(obj), to_stderr);
-                obj = cdr(obj);
-                if (!is_null(obj) && !is_pair(obj)) {
+#endif
+            while (obj_is_pair(obj)) {
+                obj_dump(obj_car_deny(obj), to_stderr);
+                obj = obj_cdr_deny(obj);
+                if (!obj_is_null(obj) && !obj_is_pair(obj)) {
                     PRINTF(" . ");
-                    dump(obj, to_stderr);
+                    obj_dump(obj, to_stderr);
                     break;
                 }
-                if (!is_null(obj))
+                if (!obj_is_null(obj))
                     PRINTF(" ");
             }
             PRINTF(")");
             break;
         case ENV_OBJ:
+#ifdef REF_COUNT_DEBUG
+            PRINTF("{%d}#<env 0x%p>", obj->ref_count, obj);
+#else
             PRINTF("#<env 0x%p>", obj);
+#endif
             break;
         case PRIM_OPERATIVE_OBJ:
+#ifdef REF_COUNT_DEBUG
+            PRINTF("{%d}#<prim-operative 0x%p>", obj->ref_count, obj);
+#else
             PRINTF("#<prim-operative 0x%p>", obj);
+#endif
             break;
         case COMPOUND_OPERATIVE_OBJ:
+#ifdef REF_COUNT_DEBUG
+            PRINTF("{%d}#<compound-operative 0x%p>", obj->ref_count, obj);
+#else
             PRINTF("#<compound-operative 0x%p>", obj);
+#endif
             break;
         case APPLICATIVE_OBJ:
+#ifdef REF_COUNT_DEBUG
+            PRINTF("{%d}#<applicative 0x%p>", obj->ref_count, obj);
+#else
             PRINTF("#<applicative 0x%p>", obj);
+#endif
             break;
         default:
             PRINTF("???");
@@ -616,17 +573,33 @@ void dump(obj_t* obj, int to_stderr)
     }
 }
 
+obj_t* obj_eval_expr(obj_t* obj, obj_t* env)
+{
+   obj_t* temp_expr_list = obj_cons_own(obj, KNULL);
+   obj_t* result = $eval(temp_expr_list, env);
+   obj_unref(temp_expr_list);
+   return result;
+}
+
+obj_t* obj_eval_str(const char* str, obj_t* env)
+{
+   obj_t* temp_expr = read(str);
+   obj_t* result = obj_eval_expr(temp_expr, env);
+   obj_unref(temp_expr);
+   return result;
+}
+
 //
 // interpreter init, this needs happen before any thing else.
 //
 
-void init()
+void obj_init()
 {
     assert(sizeof(obj_t) == 64);
 
-    pool_init();
-    g_env = make_environment(KNULL, KNULL);
-    ref(g_env);
+    _pool_init();
+    g_env = obj_make_environment(KNULL, KNULL);
+    obj_ref(g_env);
     prim_init();
 
     // we need $sequence before we can load files.
@@ -641,21 +614,14 @@ void init()
                                                             #inert (eval (cons $aux body) env)))))) \
                      ($vau (first second) env ((wrap ($vau #ignore #ignore (eval second env))) \
                                                (eval first env)))))";
-    obj_t* e = read(seq_str);
-    ref(e);
-    obj_t* eval_list = cons(e, KNULL);
-    ref(eval_list);
-    obj_t* r = $eval(eval_list, g_env);
-    ref(r);
-    unref(eval_list);
-    
+
+    // define $sequence first.
+    obj_t* result = obj_eval_str(seq_str, g_env);
+    obj_unref(result);
+
     // bootstrap
     obj_t* bootstrap = read_file("bootstrap.ooo");
-    ref(bootstrap);
-    eval_list = cons(bootstrap, KNULL);
-    ref(eval_list);
-    r = $eval(eval_list, g_env);
-    ref(r);
-    unref(eval_list);
-    unref(r);
+    result = obj_eval_expr(bootstrap, g_env);
+    obj_unref(bootstrap);
+    obj_unref(result);
 }

@@ -3,17 +3,21 @@ Bananas
 
 Monkeys love bananas, parenthesis, not so much.
 
-TODO
------------
 
-* sequence
-* eval bootstrap.ooo
-* recursive def
+Ref Counting Notes
+----------------
+All objects are ref-counted.
+
+The functions in obj.c have different ref-counting behaviors.
+Function with the own suffix implies that the caller owns the return value, 
+and must unref it when they are finished with it.
+The deny suffix means the caller does not own the value directly. 
+For example: just reading a value, or passing it on to another function which 
+will retain ownership.
 
 Code Review
 ----------------
 * What is the minimal set of prims that we need?
-* should we try kernal style $vau?
 
 Exceptions
 ----------------
@@ -22,10 +26,6 @@ Make this work. somehow. setjmp, longjmp?
 Immediate values
 -------------------
 Is there some hacky way to use doubles or floats as immediate values?  Nans?
-
-Macros
--------------------
-These are nice to play with.
 
 Kernel Notes
 ====================
@@ -65,7 +65,7 @@ Core types and primitive features
 
 Core library features
 ------------------------------
-* $sequence - memory leak...
+* $sequence
 * list
 * list*
 
