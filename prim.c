@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#include <math.h>
 
 typedef struct { 
     const char* name;
@@ -18,6 +19,7 @@ static prim_info_t s_prim_infos[] = {
     {"null?", $is_null, 1}, 
     {"symbol?", $is_symbol, 1}, 
     {"number?", $is_number, 1}, 
+    {"inexact?", $is_inexact, 1}, 
     {"pair?", $is_pair, 1}, 
     {"environment?", $is_environment, 1}, 
     {"operative?", $is_operative, 1}, 
@@ -39,11 +41,12 @@ static prim_info_t s_prim_infos[] = {
     {"-", $sub, 1},
     {"*", $mul, 1},
     {"/", $div, 1},
-    {">?", $gt, 1},
-    {">=?", $gteq, 1},
-    {"<?", $lt, 1},
-    {"<=?", $lteq, 1},
-
+    {">?", $num_gt, 1},
+    {">=?", $num_gteq, 1},
+    {"=?", $num_eq, 1},
+    {"<?", $num_lt, 1},
+    {"<=?", $num_lteq, 1},
+    {"abs", $num_abs, 1},
     {"", NULL}
 };
 
@@ -89,6 +92,7 @@ DEF_TYPE_PREDICATE(is_boolean)
 DEF_TYPE_PREDICATE(is_null)
 DEF_TYPE_PREDICATE(is_symbol)
 DEF_TYPE_PREDICATE(is_number)
+DEF_TYPE_PREDICATE(is_inexact)
 DEF_TYPE_PREDICATE(is_pair)
 DEF_TYPE_PREDICATE(is_environment)
 DEF_TYPE_PREDICATE(is_operative)
@@ -308,7 +312,18 @@ obj_t* $##name(obj_t* obj, obj_t* env)                          \
     return a->data.number op b->data.number ? KTRUE : KFALSE;   \
 }
 
-MATH_CMP_PRIM(gt, >)
-MATH_CMP_PRIM(gteq, >=)
-MATH_CMP_PRIM(lt, <)
-MATH_CMP_PRIM(lteq, <=)
+MATH_CMP_PRIM(num_gt, >)
+MATH_CMP_PRIM(num_gteq, >=)
+MATH_CMP_PRIM(num_eq, ==)
+MATH_CMP_PRIM(num_lt, <)
+MATH_CMP_PRIM(num_lteq, <=)
+
+#define MATH_FUNC(name, func)                                   \
+obj_t* $##name(obj_t* obj, obj_t* env)                          \
+{                                                               \
+    obj_t* a = obj_car_deny(obj);                               \
+    assert(obj_is_number(a));                                   \
+    return obj_make_number(func(a->data.number));               \
+}
+
+MATH_FUNC(num_abs, fabs)

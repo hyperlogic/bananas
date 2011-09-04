@@ -134,3 +134,73 @@
       ($if (>? k 0)
            (list-tail (cdr ls) (- k 1))
            ls)))
+
+($define! encycle!
+   ($lambda (ls k1 k2)
+      ($if (>? k2 0)
+           (set-cdr! (list-tail ls (+ k1 k2 -1))
+                     (list-tail ls k1))
+           #inert)))
+
+;
+; digression:
+;   math applicatives max and lcm are used by map, so must be provided
+;   to test map, and without using anything derived later than map
+;
+
+($define! max
+   ($lambda x
+
+      ($define! aux
+         ($lambda (count result . x)
+            ($if (<=? count 0)
+                 result
+                 ($sequence
+                    ($if (>? (car x) result)
+                         ($define! result ($if (inexact? result)
+                                               (* (car x) 1.0)
+                                               (car x)))
+                         ($if (inexact? (car x))
+                              ($define! result (* result 1.0))
+                              #inert))
+                    (apply aux (list* (- count 1) result (cdr x)))))))
+
+      (apply aux (list* (car (get-list-metrics x))
+                        #e-infinity
+                        x))))
+
+($define! lcm
+   ($lambda x
+
+      ($define! gcd
+         ($lambda (x y)
+            ($if (=? x y)
+                 x             ; don't worry here about inexactness
+                 ($if (<? x y)
+                      (gcd x (- y x))
+                      (gcd (- x y) y)))))
+
+      ($define! aux3
+         ($lambda (x y)
+            (/ (* x y) (gcd x y))))
+
+      ($define! aux2
+         ($lambda (result k)
+            ($cond ((=? k 0)                 (* k #e+infinity)) ; induce error
+                   ((=? k #e+infinity)       (* k result))
+                   ((=? k #e-infinity)       (* k result -1))
+                   ((=? result #e+infinity)  (* result (abs k)))
+                   (#t                       (aux3 result (abs k))))))
+
+      ($define! aux
+         ($lambda (count result . x)
+            ($if (<=? count 0)
+                 result
+                 (apply aux (list* (- count 1)
+                                   (aux2 result (car x))
+                                   (cdr x))))))
+
+      (apply aux (list* (car (get-list-metrics x))
+                        1
+                        x))))
+

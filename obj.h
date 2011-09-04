@@ -86,6 +86,7 @@ int obj_is_boolean(obj_t* obj);
 int obj_is_null(obj_t* obj);
 int obj_is_symbol(obj_t* obj);
 int obj_is_number(obj_t* obj);
+int obj_is_inexact(obj_t* obj);
 int obj_is_pair(obj_t* obj);
 int obj_is_environment(obj_t* obj);
 int obj_is_prim_operative(obj_t* obj);

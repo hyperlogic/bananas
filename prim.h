@@ -11,6 +11,7 @@ obj_t* $is_boolean(obj_t* obj, obj_t* env);
 obj_t* $is_null(obj_t* obj, obj_t* env);
 obj_t* $is_symbol(obj_t* obj, obj_t* env);
 obj_t* $is_number(obj_t* obj, obj_t* env);
+obj_t* $is_inexact(obj_t* obj, obj_t* env);
 obj_t* $is_pair(obj_t* obj, obj_t* env);
 obj_t* $is_environment(obj_t* obj, obj_t* env);
 obj_t* $is_operative(obj_t* obj, obj_t* env);
@@ -32,9 +33,11 @@ obj_t* $add(obj_t* obj, obj_t* env);
 obj_t* $sub(obj_t* obj, obj_t* env);
 obj_t* $mul(obj_t* obj, obj_t* env);
 obj_t* $div(obj_t* obj, obj_t* env);
-obj_t* $gt(obj_t* obj, obj_t* env);
-obj_t* $gteq(obj_t* obj, obj_t* env);
-obj_t* $lt(obj_t* obj, obj_t* env);
-obj_t* $lteq(obj_t* obj, obj_t* env);
+obj_t* $num_gt(obj_t* obj, obj_t* env);
+obj_t* $num_gteq(obj_t* obj, obj_t* env);
+obj_t* $num_eq(obj_t* obj, obj_t* env);
+obj_t* $num_lt(obj_t* obj, obj_t* env);
+obj_t* $num_lteq(obj_t* obj, obj_t* env);
+obj_t* $num_abs(obj_t* obj, obj_t* env);
 
 #endif

@@ -15,15 +15,15 @@ The deny suffix means the caller does not own the value directly.
 For example: just reading a value, or passing it on to another function which 
 will retain ownership.
 
-TODO: found memory leak in (list* 1)
-
-Code Review
-----------------
-* What is the minimal set of prims that we need?
+Fix these Leaks
+-----------------
+* (list* 1)
+* (max 1 2)
 
 Exceptions
 ----------------
 Make this work. somehow. setjmp, longjmp?
+How to make this work with ref-counting?
 
 Immediate values
 -------------------
@@ -70,6 +70,3 @@ Core library features
 * $sequence
 * list
 * list*
-
-
-

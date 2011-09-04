@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <math.h>
 
 // static object pool
 #define MAX_OBJS 131072
@@ -296,6 +297,12 @@ int obj_is_number(obj_t* obj)
 {
     assert(obj);
     return !obj_is_immediate(obj) && obj->type == NUMBER_OBJ;
+}
+
+int obj_is_inexact(obj_t* obj)
+{
+    assert(obj);
+    return 1;
 }
 
 int obj_is_pair(obj_t* obj)
@@ -600,6 +607,19 @@ void obj_init()
     _pool_init();
     g_env = obj_make_environment(KNULL, KNULL);
     obj_ref(g_env);
+
+    obj_t* symbol = obj_make_symbol("#e-infinity");
+    obj_t* value = obj_make_number(-INFINITY);
+    $define(obj_cons_deny(symbol, obj_cons_deny(value, KNULL)), g_env);
+    obj_unref(value);
+    obj_unref(symbol);
+
+    symbol = obj_make_symbol("#e+infinity");
+    value = obj_make_number(INFINITY);
+    $define(obj_cons_deny(symbol, obj_cons_deny(value, KNULL)), g_env);
+    obj_unref(value);
+    obj_unref(symbol);
+
     prim_init();
 
     // we need $sequence before we can load files.
