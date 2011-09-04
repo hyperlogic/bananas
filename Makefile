@@ -2,12 +2,12 @@
 
 GCC = gcc
 
-CFLAGS = -Wall -g -DKERNEL
+CFLAGS = -Wall -g -DKERNEL # -DREF_COUNT_DEBUG
 LFLAGS = -lc -lreadline
 
 OBJ = bananas.o parse.o prim.o obj.o symbol.o
 
-HEADERS = parse.h prim.h obj.h symbol.h
+HEADERS = Makefile parse.h prim.h obj.h symbol.h
 
 bananas: $(OBJ)
 	$(GCC) $(OBJ) -o bananas $(LFLAGS)

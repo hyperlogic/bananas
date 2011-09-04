@@ -303,9 +303,9 @@ obj_t* $##name(obj_t* obj, obj_t* env)                          \
 {                                                               \
     obj_t* a = obj_car_deny(obj);                               \
     assert(obj_is_number(a));                                   \
-    obj_t* d = obj_cdr_deny(obj);                               \
-    assert(obj_is_number(d));                                   \
-    return a->data.number op a->data.number ? KTRUE : KFALSE;   \
+    obj_t* b = obj_car_deny(obj_cdr_deny(obj));                 \
+    assert(obj_is_number(b));                                   \
+    return a->data.number op b->data.number ? KTRUE : KFALSE;   \
 }
 
 MATH_CMP_PRIM(gt, >)
