@@ -15,6 +15,8 @@ The deny suffix means the caller does not own the value directly.
 For example: just reading a value, or passing it on to another function which 
 will retain ownership.
 
+TODO: found memory leak in (list* 1)
+
 Code Review
 ----------------
 * What is the minimal set of prims that we need?
