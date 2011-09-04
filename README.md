@@ -19,6 +19,7 @@ Fix these Leaks
 -----------------
 * (list* 1)
 * (max 1 2)
+* (or? #f) - leaks 784 nodes! wtf?!?
 
 Exceptions
 ----------------

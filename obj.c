@@ -11,8 +11,8 @@
 #include <math.h>
 
 // static object pool
-#define MAX_OBJS 131072
-obj_t g_obj_pool[MAX_OBJS];  // 8meg
+#define MAX_OBJS 131072 * 2
+obj_t g_obj_pool[MAX_OBJS];  // 16meg
 
 // free list
 obj_t* g_free_objs = NULL;
