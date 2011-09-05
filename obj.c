@@ -644,4 +644,12 @@ void obj_init()
     result = obj_eval_expr(bootstrap, g_env);
     obj_unref(bootstrap);
     obj_unref(result);
+
+    // unit-test
+    //obj_t* unit_test_env = obj_make_environment(KNULL, g_env);
+    obj_t* unit_test = read_file("unit-test.ooo");
+    result = obj_eval_expr(unit_test, g_env);
+    obj_unref(unit_test);
+    obj_unref(result);
+    //obj_unref(unit_test_env);
 }

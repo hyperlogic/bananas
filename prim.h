@@ -39,5 +39,6 @@ obj_t* $num_eq(obj_t* obj, obj_t* env);
 obj_t* $num_lt(obj_t* obj, obj_t* env);
 obj_t* $num_lteq(obj_t* obj, obj_t* env);
 obj_t* $num_abs(obj_t* obj, obj_t* env);
+obj_t* $print(obj_t* obj, obj_t* env);
 
 #endif

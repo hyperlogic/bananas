@@ -1,0 +1,93 @@
+; emacs lisp-mode
+; (put '$lambda 'lisp-indent-function 'defun)
+; (put '$vau 'lisp-indent-function 'defun)
+; (put '$define! 'lisp-indent-function 'defun)
+; (put '$seqeunce 'lisp-indent-function 0)
+; (put '$if 'lisp-indent-function 2)
+; (put '$let 'lisp-indent-function 1)
+; (put '$letrec 'lisp-indent-function 1)
+
+(print 'Welcome!)
+
+($define! $assert
+  ($vau (x) env
+    ($if (not? (eval x env))
+        (print 'Test x 'Failed!)
+      #inert)))
+
+;; inert?
+($assert (inert? #inert))
+($assert (not? (inert? #ignore)))
+($assert (not? (inert? #f)))
+($assert (not? (inert? ())))
+($assert (not? (inert? 'foo)))
+($assert (not? (inert? 0.0)))
+($assert (not? (inert? '(1 2))))
+($assert (not? (inert? (make-environment))))
+($assert (not? (inert? $if)))
+($assert (not? (inert? inert?)))
+
+;; ignore?
+($assert (not? (ignore? #inert)))
+($assert (ignore? #ignore))
+($assert (not? (ignore? #f)))
+($assert (not? (ignore? ())))
+($assert (not? (ignore? 'foo)))
+($assert (not? (ignore? 0.0)))
+($assert (not? (ignore? '(1 2))))
+($assert (not? (ignore? (make-environment))))
+($assert (not? (ignore? $if)))
+($assert (not? (ignore? ignore?)))
+
+;; boolean?
+($assert (not? (boolean? #inert)))
+($assert (not? (boolean? #ignore)))
+($assert (boolean? #f))
+($assert (not? (boolean? ())))
+($assert (not? (boolean? 'foo)))
+($assert (not? (boolean? 0.0)))
+($assert (not? (boolean? '(1 2))))
+($assert (not? (boolean? (make-environment))))
+($assert (not? (boolean? $if)))
+($assert (not? (boolean? boolean?)))
+
+;; null?
+($assert (not? (null? #inert)))
+($assert (not? (null? #ignore)))
+($assert (not? (null? #f)))
+($assert (null? ()))
+($assert (not? (null? 'foo)))
+($assert (not? (null? 0.0)))
+($assert (not? (null? '(1 2))))
+($assert (not? (null? (make-environment))))
+($assert (not? (null? $if)))
+($assert (not? (null? null?)))
+
+;; symbol?
+($assert (not? (symbol? #inert)))
+($assert (not? (symbol? #ignore)))
+($assert (not? (symbol? #f)))
+($assert (not? (symbol? ())))
+($assert (symbol? 'foo))
+($assert (not? (symbol? 0.0)))
+($assert (not? (symbol? '(1 2))))
+($assert (not? (symbol? (make-environment))))
+($assert (not? (symbol? $if)))
+($assert (not? (symbol? symbol?)))
+
+;; number?
+($assert (not? (number? #inert)))
+($assert (not? (number? #ignore)))
+($assert (not? (number? #f)))
+($assert (not? (number? ())))
+($assert (not? (number? 'foo)))
+($assert (number? 0.0))
+($assert (not? (number? '(1 2))))
+($assert (not? (number? (make-environment))))
+($assert (not? (number? $if)))
+($assert (not? (number? number?)))
+
+;; pair?
+;; environment?
+;; operative?
+;; applicative?

@@ -15,11 +15,13 @@ The deny suffix means the caller does not own the value directly.
 For example: just reading a value, or passing it on to another function which 
 will retain ownership.
 
-Fix these Leaks
+Fix these Leaks/Bugs
 -----------------
 * (list* 1)
 * (max 1 2)
 * (or? #f) - leaks 784 nodes! wtf?!?
+* (length '(1 2 3 4 5 6 7))  - runs out of memory wtf?!??
+* (length '(1 2 3 4 5 6) - leaks 4329 nodes?!?!!?
 
 Exceptions
 ----------------

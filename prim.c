@@ -47,6 +47,7 @@ static prim_info_t s_prim_infos[] = {
     {"<?", $num_lt, 1},
     {"<=?", $num_lteq, 1},
     {"abs", $num_abs, 1},
+    {"print", $print, 1},
     {"", NULL}
 };
 
@@ -327,3 +328,14 @@ obj_t* $##name(obj_t* obj, obj_t* env)                          \
 }
 
 MATH_FUNC(num_abs, fabs)
+
+obj_t* $print(obj_t* obj, obj_t* env)
+{
+    while (obj_is_pair(obj)) {
+        obj_dump(obj_car_deny(obj), 0);
+        printf(" ");
+        obj = obj_cdr_deny(obj);
+    }
+    printf("\n");
+    return KINERT;
+}
