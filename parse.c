@@ -12,8 +12,6 @@
         exit(1);                                                \
     } while(0)
 
-// TODO: ref counting
-
 #define ADVANCE() *pp = *pp + 1
 #define PEEK(i) *(*pp + i)
 
@@ -138,15 +136,12 @@ obj_t* parse_list(const char** pp)
         do {
             obj_t* obj = parse_expr(pp);
             if (obj_is_null(pair)) {
-                root = obj_cons_own(obj, KNULL);
-                obj_unref(obj);
+                root = obj_cons(obj, KNULL);
                 pair = root;
             } else {
                 obj_t* temp = pair;
-                pair = obj_cons_own(obj, KNULL);
-                obj_unref(obj);
+                pair = obj_cons(obj, KNULL);
                 obj_set_cdr(temp, pair);
-                obj_unref(pair);
             }
 
             parse_skip_whitespace(pp);
@@ -162,7 +157,6 @@ obj_t* parse_list(const char** pp)
             obj_t* obj = parse_expr(pp);
             assert(pair);
             obj_set_cdr(pair, obj);
-            obj_unref(obj);
         }
 
         parse_skip_whitespace(pp);
@@ -184,9 +178,7 @@ obj_t* parse_quoted_expr(const char** pp)
 
     obj_t* expr = parse_expr(pp);
     obj_t* symbol = obj_make_symbol("$quote");
-    obj_t* result = obj_cons_own(symbol, obj_cons_deny(expr, KNULL));
-    obj_unref(symbol);
-    obj_unref(expr);
+    obj_t* result = obj_cons(symbol, obj_cons(expr, KNULL));
     return result;
 }
 
@@ -208,17 +200,15 @@ obj_t* parse_expr_sequence(const char** pp)
 {
     // EXPR*
     obj_t* symbol = obj_make_symbol("$sequence");
-    obj_t* root = obj_cons_own(symbol, KNULL);
-    obj_unref(symbol);
+    obj_t* root = obj_cons(symbol, KNULL);
     obj_t* pair = root;
-    while(1) {
+    while (1) {
         parse_skip_whitespace(pp);
         if (PEEK(0) == 0)
             break;
         obj_t* expr = parse_expr(pp);
-        obj_set_cdr(pair, obj_cons_deny(expr, KNULL));
-        obj_unref(expr);
-        pair = obj_cdr_deny(pair);
+        obj_set_cdr(pair, obj_cons(expr, KNULL));
+        pair = obj_cdr(pair);
     }
     return root;
 }

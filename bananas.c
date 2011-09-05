@@ -14,9 +14,7 @@ int main(int argc, char* argv[])
     char* line = NULL;
     while (1) {
 
-//#ifdef REF_COUNT_DEBUG
         printf("  %d used objs\n", g_num_used_objs);
-//#endif
 
         line = readline("\\O_o/ > ");
         if (strcmp(line, "quit") == 0)
@@ -33,10 +31,7 @@ int main(int argc, char* argv[])
         printf("  ");
         obj_dump(result, 0);
         printf("\n");
-
-        obj_unref(result);
     }
-    obj_unref(repl_env);
 
     return 0;
 }

@@ -62,6 +62,10 @@ Fix these Leaks/Bugs
 * (length '(1 2 3 4 5 6) - leaks 4329 nodes?!?!!?
 * (eq? #t #f) - 196 nodes?!!?!?!?!?!  advanced version in bootstrap.ooo
 
+Code Cleanup
+----------------
+Adding a obj_cadr() would make the code easier to read.
+
 Exceptions
 ----------------
 Make this work. somehow. setjmp, longjmp?
