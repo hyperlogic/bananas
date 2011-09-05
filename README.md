@@ -15,13 +15,36 @@ The deny suffix means the caller does not own the value directly.
 For example: just reading a value, or passing it on to another function which 
 will retain ownership.
 
+Vau circular ref problem...
+-----------------------------
+There is a circular dependency, between a $vau and the environment it is defined within.
+This causes a huge leaks, every time a non-anonymous compound-prim is evaluated, because the
+ref-counter cannot clean up the local-env.
+
+There are three solutions:
+  * Ditch ref-counting and garbage-collect objs instead.  This should handle
+    the cycles no problem.
+  * Pre-evaluate all (non-formal) (non-eformal) symbols in the static-env when
+    the $vau expression is evaluated.  This will also prevent mutations of the static_env
+    after the $vau expression to affect the results.  
+    But there's a definite difference. You loose the flexibilty of having access to the
+    static env. You will lose the ability to lookup an argument in the static_env.
+    (Not-an option)
+  * Live with the leaks (not an option)
+  
+Well, i guess that means I'm going to switch to a gc.
+
 Fix these Leaks/Bugs
 -----------------
-* (list* 1)
+* (get-list-metrics) - 18 nodes
+* (list*) - 8 nodes! wtf?
+* (list* 1) - 10 nodes!
 * (max 1 2)
 * (or? #f) - leaks 784 nodes! wtf?!?
 * (length '(1 2 3 4 5 6 7))  - runs out of memory wtf?!??
 * (length '(1 2 3 4 5 6) - leaks 4329 nodes?!?!!?
+* (eq? #t #f) - 196 nodes?!!?!?!?!?!  advanced version in bootstrap.ooo
+
 
 Exceptions
 ----------------

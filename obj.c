@@ -60,17 +60,15 @@ static obj_t* _pool_alloc()
 
     assert(g_num_used_objs + g_num_free_objs == MAX_OBJS);
 
-#ifdef REF_COUNT_DEBUG
-    fprintf(stderr, "ALLOC obj %p\n", obj);
-#endif
-
     return obj;
 }
 
 static void _pool_free(obj_t* obj)
 {
 #ifdef REF_COUNT_DEBUG
-    fprintf(stderr, "FREE  obj %p\n", obj);
+    fprintf(stderr, "FREE obj %p, \n", obj);
+    obj_dump(obj, 1);
+    fprintf(stderr, "\n");
 #endif
 
     assert(obj);
@@ -153,6 +151,11 @@ obj_t* obj_make_symbol(const char* str)
     obj->type = SYMBOL_OBJ;
     obj->data.symbol = id;
     obj->ref_count = 1;
+
+#ifdef REF_COUNT_DEBUG
+    fprintf(stderr, "ALLOC obj %p, symbol = %s\n", obj, symbol_get(id));
+#endif
+
     return obj;
 }
 
@@ -167,6 +170,11 @@ obj_t* obj_make_symbol2(const char* start, const char* end)
     obj->type = SYMBOL_OBJ;
     obj->data.symbol = id;
     obj->ref_count = 1;
+
+#ifdef REF_COUNT_DEBUG
+    fprintf(stderr, "ALLOC obj %p, symbol = %s\n", obj, symbol_get(id));
+#endif
+
     return obj;
 }
 
@@ -176,6 +184,11 @@ obj_t* obj_make_number(double num)
     obj->type = NUMBER_OBJ;
     obj->data.number = num;
     obj->ref_count = 1;
+
+#ifdef REF_COUNT_DEBUG
+    fprintf(stderr, "ALLOC obj %p, number = %f\n", obj, num);
+#endif
+
     return obj;
 }
 
@@ -203,6 +216,11 @@ obj_t* obj_make_pair(obj_t* car, obj_t* cdr)
     obj->data.pair.car = car;
     obj->data.pair.cdr = cdr;
     obj->ref_count = 1;
+
+#ifdef REF_COUNT_DEBUG
+    fprintf(stderr, "ALLOC obj %p, pair\n", obj);
+#endif
+
     return obj;
 }
 
@@ -215,6 +233,11 @@ obj_t* obj_make_environment(obj_t* plist, obj_t* parent)
     obj->data.env.plist = plist;
     obj->data.env.parent = parent;
     obj->ref_count = 1;
+
+#ifdef REF_COUNT_DEBUG
+    fprintf(stderr, "ALLOC obj %p, environment\n", obj);
+#endif
+
     return obj;
 }
 
@@ -224,6 +247,11 @@ obj_t* obj_make_prim_operative(prim_operative_t prim)
     obj->type = PRIM_OPERATIVE_OBJ;
     obj->data.prim_operative = prim;  // prim is a c-function, no need to ref it.
     obj->ref_count = 1;
+
+#ifdef REF_COUNT_DEBUG
+    fprintf(stderr, "ALLOC obj %p, prim-operative\n", obj);
+#endif
+
     return obj;
 }
 
@@ -240,6 +268,11 @@ obj_t* obj_make_compound_operative(obj_t* formals, obj_t* eformal, obj_t* body, 
     obj->data.compound_operative.body = body;
     obj->data.compound_operative.static_env = static_env;
     obj->ref_count = 1;
+
+#ifdef REF_COUNT_DEBUG
+    fprintf(stderr, "ALLOC obj %p, compound-operative\n", obj);
+#endif
+
     return obj;
 }
 
@@ -250,6 +283,11 @@ obj_t* obj_make_applicative(obj_t* operative)
     obj->type = APPLICATIVE_OBJ;
     obj->data.applicative.operative = operative;
     obj->ref_count = 1;
+
+#ifdef REF_COUNT_DEBUG
+    fprintf(stderr, "ALLOC obj %p, applicative\n", obj);
+#endif
+
     return obj;
 }
 
@@ -606,7 +644,6 @@ void obj_init()
 
     _pool_init();
     g_env = obj_make_environment(KNULL, KNULL);
-    obj_ref(g_env);
 
     obj_t* symbol = obj_make_symbol("#e-infinity");
     obj_t* value = obj_make_number(-INFINITY);

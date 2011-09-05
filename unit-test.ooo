@@ -1,4 +1,6 @@
-; emacs lisp-mode
+;; -*- mode: Lisp; -*-
+
+; for emacs lisp-mode
 ; (put '$lambda 'lisp-indent-function 'defun)
 ; (put '$vau 'lisp-indent-function 'defun)
 ; (put '$define! 'lisp-indent-function 'defun)
@@ -9,6 +11,20 @@
 
 (print 'Welcome!)
 
+;; test for leak
+($define! qqq
+  ($vau () #ignore
+    ($define! aux ($vau () #ignore #t))))
+
+;; wacky vau test
+($define! $static_or_dynamic_eval
+  ($vau (c x) dyn-env
+    ($define! xxx 10.0)
+    ($if (eval c dyn-env)
+        (eval x (get-current-environment))
+      (eval x dyn-env))))
+
+;; prints expression if it doesn't evaluate to #t
 ($define! $assert
   ($vau (x) env
     ($if (not? (eval x env))
