@@ -3,6 +3,7 @@ Bananas
 
 Monkeys love bananas, parenthesis, not so much.
 
+Left off at gc-ifying parse.c line 154.
 
 Ref Counting Notes
 --------------------

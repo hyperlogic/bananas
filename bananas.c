@@ -10,11 +10,13 @@ int main(int argc, char* argv[])
 {
     obj_init();
 
-    obj_t* repl_env = obj_make_environment(KNULL, g_env);
+//    obj_t* repl_env = obj_make_environment(KNULL, g_env);
     char* line = NULL;
     while (1) {
 
-        printf("  %d used objs\n", g_num_used_objs);
+        printf("  before gc: %d used objs\n", g_num_used_objs);
+        obj_gc();
+        printf("   after gc: %d used objs\n", g_num_used_objs);
 
         line = readline("\\O_o/ > ");
         if (strcmp(line, "quit") == 0)
@@ -25,12 +27,15 @@ int main(int argc, char* argv[])
         if (line && *line)
             add_history(line);
 
-        obj_t* result = obj_eval_str(line, repl_env);
+        obj_stack_frame_push();
+        obj_stack_push(read(line));
+        //obj_stack_push(obj_eval_str(line, repl_env));
         free(line);
 
         printf("  ");
-        obj_dump(result, 0);
+        obj_dump(obj_stack_get(0), 0);
         printf("\n");
+        obj_stack_frame_pop();
     }
 
     return 0;
