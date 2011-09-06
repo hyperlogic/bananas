@@ -55,6 +55,13 @@ static void _pool_init()
 
 static obj_t* _pool_alloc()
 {
+    // TODO: REMOVE
+    // Really hammer on gc...
+    static int count = 0;
+    if (count >= 1)
+        obj_gc();
+    count++;
+
     if (!g_free_objs)
         obj_gc();
 
@@ -82,7 +89,7 @@ static obj_t* _pool_alloc()
 static void _pool_free(obj_t* obj)
 {
 #ifdef GC_DEBUG
-    fprintf(stderr, "FREE obj %p, \n", obj);
+    fprintf(stderr, "FREE obj %p, ", obj);
     obj_dump(obj, 1);
     fprintf(stderr, "\n");
 #endif
@@ -105,7 +112,7 @@ static void _pool_free(obj_t* obj)
     g_num_free_objs++;
 
     // helps track down gc problems.
-    memset(obj, 0xfd, sizeof(obj));
+    obj->type = GARBAGE_OBJ;
 
     assert(g_num_used_objs + g_num_free_objs == MAX_OBJS);
 }
@@ -201,12 +208,6 @@ void obj_stack_push(obj_t* obj)
 {
     assert(g_num_stack_objs < MAX_STACK_OBJS);  // stack overflow
     g_stack[g_num_stack_objs++] = obj;
-}
-
-void obj_stack_pop()
-{
-    assert(g_num_stack_objs > 0);  // stack underflow.
-    g_num_stack_objs--;
 }
 
 static int _stack_index(int i)
@@ -604,7 +605,7 @@ void obj_dump(obj_t* obj, int to_stderr)
         else if (obj == KNULL)
             PRINTF("()");
         else
-            PRINTF("#???%p", obj);
+            PRINTF("#<??? %p>", obj);
     } else {
         switch (obj->type) {
         case NUMBER_OBJ:
@@ -640,8 +641,11 @@ void obj_dump(obj_t* obj, int to_stderr)
         case APPLICATIVE_OBJ:
             PRINTF("#<applicative 0x%p>", obj);
             break;
+        case GARBAGE_OBJ:
+            PRINTF("#<garbage %p>", obj);
+            break;
         default:
-            PRINTF("#??0x%x", obj->type);
+            PRINTF("#<? 0x%x>", obj->type);
             break;
         }
     }
@@ -679,7 +683,6 @@ void obj_init()
     _pool_init();
     g_env = obj_make_environment(KNULL, KNULL);
 
-    /*
     obj_stack_frame_push();
     obj_stack_push(obj_make_symbol("#e-infinity"));
     obj_stack_push(obj_make_number(-INFINITY));
@@ -710,6 +713,7 @@ void obj_init()
     // define $sequence first.
     obj_eval_str(seq_str, g_env);
 
+    /*
     // bootstrap
     obj_stack_frame_push();
     obj_stack_push(read_file("bootstrap.ooo"));

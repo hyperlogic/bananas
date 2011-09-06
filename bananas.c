@@ -30,8 +30,7 @@ int main(int argc, char* argv[])
             add_history(line);
 
         obj_stack_frame_push();
-        obj_stack_push(read(line));
-        //obj_stack_push(obj_eval_str(line, repl_env));
+        obj_stack_push(obj_eval_str(line, repl_env));
         free(line);
 
         printf("  ");

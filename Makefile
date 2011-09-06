@@ -2,7 +2,7 @@
 
 GCC = gcc
 
-CFLAGS = -Wall -g -DKERNEL # -DREF_COUNT_DEBUG
+CFLAGS = -Wall -g -DKERNEL # -DGC_DEBUG
 LFLAGS = -lc -lreadline
 
 OBJ = bananas.o parse.o prim.o obj.o symbol.o

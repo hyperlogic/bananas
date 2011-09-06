@@ -28,7 +28,7 @@ typedef struct {
 } applicative_t;
 
 enum obj_type { SYMBOL_OBJ = 0, NUMBER_OBJ, PAIR_OBJ, ENV_OBJ,
-                PRIM_OPERATIVE_OBJ, COMPOUND_OPERATIVE_OBJ, APPLICATIVE_OBJ };
+                PRIM_OPERATIVE_OBJ, COMPOUND_OPERATIVE_OBJ, APPLICATIVE_OBJ, GARBAGE_OBJ };
 
 // the last 5 bits are used to indicate immediate values.
 enum obj_immedate_tags { IMM_TAG = 1, INERT_TAG = 2,
@@ -69,7 +69,6 @@ void obj_gc();
 void obj_stack_frame_push();
 void obj_stack_frame_pop();
 void obj_stack_push(obj_t* obj);
-void obj_stack_pop();
 obj_t* obj_stack_get(int i);
 void obj_stack_set(int i, obj_t* obj);
 

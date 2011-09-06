@@ -51,21 +51,24 @@ static prim_info_t s_prim_infos[] = {
     {"", NULL}
 };
 
-// TODO: GC FIX
 void prim_init()
 {
     // register prims
     prim_info_t* p = s_prim_infos;
     while (p->prim) {
         if (p->wrap) {
-            obj_t* symbol = obj_make_symbol(p->name);
-            obj_t* operative = obj_make_prim_operative(p->prim);
-            obj_t* applicative = obj_make_applicative(operative);
-            $define(obj_cons(symbol, obj_cons(applicative, KNULL)), g_env);
+            obj_stack_frame_push();
+            obj_stack_push(obj_make_symbol(p->name));
+            obj_stack_push(obj_make_prim_operative(p->prim));
+            obj_stack_push(obj_make_applicative(obj_stack_get(1)));
+            obj_env_define(g_env, obj_stack_get(0), obj_stack_get(2));
+            obj_stack_frame_pop();
         } else {
-            obj_t* symbol = obj_make_symbol(p->name);
-            obj_t* operative = obj_make_prim_operative(p->prim);
-            $define(obj_cons(symbol, obj_cons(operative, KNULL)), g_env);
+            obj_stack_frame_push();
+            obj_stack_push(obj_make_symbol(p->name));
+            obj_stack_push(obj_make_prim_operative(p->prim));
+            obj_env_define(g_env, obj_stack_get(0), obj_stack_get(1));
+            obj_stack_frame_pop();
         }
         p++;
     }
@@ -128,9 +131,11 @@ static obj_t* _mapcar_eval(obj_t* obj, obj_t* env)
     if (obj_is_null(obj))
         return KNULL;
     else if (obj_is_pair(obj)) {
-        obj_t* a = _eval(obj_car(obj), env);
-        obj_t* d = _mapcar_eval(obj_cdr(obj), env);
-        obj_t* result = obj_cons(a, d);
+        obj_stack_frame_push();
+        obj_stack_push(_eval(obj_car(obj), env));
+        obj_stack_push(_mapcar_eval(obj_cdr(obj), env));
+        obj_t* result = obj_cons(obj_stack_get(0), obj_stack_get(1));
+        obj_stack_frame_pop();
         return result;
     }
     else
@@ -145,37 +150,47 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
     if (obj_is_symbol(obj)) {
         return obj_env_lookup(env, obj);
     } else if (obj_is_pair(obj)) {
-        obj_t* f = _eval(obj_car(obj), env);
+        obj_stack_frame_push();
+        obj_stack_push(_eval(obj_car(obj), env));  // 0 : f
+        obj_t* f = obj_stack_get(0);
         obj_t* d = obj_cdr(obj);
-        obj_t* result = KNULL;
         if (obj_is_operative(f)) {
             if (obj_is_prim_operative(f)) {
-                return f->data.prim_operative(d, env);
+                obj_t* result = f->data.prim_operative(d, env);
+                obj_stack_frame_pop();
+                return result;
             } else {
                 assert(obj_is_compound_operative(f));
                 obj_t* formals = f->data.compound_operative.formals;
                 obj_t* eformal = f->data.compound_operative.eformal;
                 obj_t* body = f->data.compound_operative.body;
                 obj_t* static_env = f->data.compound_operative.static_env;
-                obj_t* local_env = obj_make_environment(KNULL, static_env);
+                obj_stack_push(obj_make_environment(KNULL, static_env));  // 1 : local_env
+                obj_t* local_env = obj_stack_get(1);
                 _match(formals, d, local_env);
                 if (obj_is_symbol(eformal))
                     obj_env_define(local_env, eformal, env);
-                result = _eval(body, local_env);
+                obj_t* result = _eval(body, local_env);
+                obj_stack_frame_pop();
+                return result;
             }
         } else if (obj_is_applicative(f)) {
             // let dd be the evaluated arguments d in env
-            obj_t* dd = _mapcar_eval(d, env);
+            obj_stack_push(_mapcar_eval(d, env));  // 1 : dd
+            obj_t* dd = obj_stack_get(1);
             // let ff be the underlying operative of f
             obj_t* ff = f->data.applicative.operative;
             // return eval cons(f' d') in env
-            obj_t* ops = obj_cons(ff, dd);
-            result = _eval(ops, env);
+            obj_stack_push(obj_cons(ff, dd)); // 2 : (cons ff dd)
+            obj_t* result = _eval(obj_stack_get(2), env);
+            obj_stack_frame_pop();
+            return result;
         } else {
             fprintf(stderr, "ERROR: f is not a applicative or operative\n");
+            obj_stack_frame_pop();
             assert(0);  // bad f
+            return KNULL;
         }
-        return result;
     } else {
         return obj;
     }

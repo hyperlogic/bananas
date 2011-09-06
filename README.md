@@ -3,7 +3,8 @@ Bananas
 
 Monkeys love bananas, parenthesis, not so much.
 
-Left off at gc-ifying parse.c line 154.
+Left off debugging the gc-ifying of prim.c
+Soo close.... assert during defining of $sequence.
 
 Ref Counting Notes
 --------------------
