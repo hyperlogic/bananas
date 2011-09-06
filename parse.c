@@ -132,12 +132,12 @@ obj_t* parse_list(const char** pp)
     else {
         // EXPR+
         obj_stack_frame_push();
-        obj_stack_push(KNULL); // 0 : result
+        obj_stack_push(KNULL); // 0 : root
         obj_stack_push(KNULL); // 1 : pair
         obj_stack_push(KNULL); // 2 : expr
         obj_stack_push(KNULL); // 3 : temp
         do {
-            obj_stack_set(0, parse_expr(pp));
+            obj_stack_set(2, parse_expr(pp));
             if (obj_is_null(obj_stack_get(1))) {
                 obj_stack_set(0, obj_cons(obj_stack_get(2), KNULL));
                 obj_stack_set(1, obj_stack_get(0));
@@ -181,8 +181,9 @@ obj_t* parse_quoted_expr(const char** pp)
     obj_stack_push(parse_expr(pp));
     obj_stack_push(obj_make_symbol("$quote"));
     obj_stack_push(obj_cons(obj_stack_get(0), KNULL));
-    obj_t* result = obj_cons(obj_stack_get(1), obj_stack_get(2));
-    obj_stack_pop();
+    obj_stack_push(obj_cons(obj_stack_get(1), obj_stack_get(2)));
+    obj_t* result = obj_stack_get(3);
+    obj_stack_frame_pop();
     return result;
 }
 
@@ -206,14 +207,14 @@ obj_t* parse_expr_sequence(const char** pp)
     obj_stack_frame_push();
     obj_stack_push(obj_make_symbol("$sequence"));   // 0
     obj_stack_push(obj_cons(obj_stack_get(0), KNULL));  // 1
+    obj_stack_push(KNULL); // 2
     obj_t* pair = obj_stack_get(1);
     while (1) {
         parse_skip_whitespace(pp);
         if (PEEK(0) == 0)
             break;
-        obj_stack_push(parse_expr(pp)); // 2
+        obj_stack_set(2, parse_expr(pp));
         obj_set_cdr(pair, obj_cons(obj_stack_get(2), KNULL));
-        obj_stack_pop();
         pair = obj_cdr(pair);
     }
     obj_t* result = obj_stack_get(1);

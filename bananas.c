@@ -10,7 +10,9 @@ int main(int argc, char* argv[])
 {
     obj_init();
 
-//    obj_t* repl_env = obj_make_environment(KNULL, g_env);
+    obj_stack_frame_push();
+    obj_stack_push(obj_make_environment(KNULL, g_env));
+    obj_t* repl_env = obj_stack_get(0);
     char* line = NULL;
     while (1) {
 
@@ -37,6 +39,7 @@ int main(int argc, char* argv[])
         printf("\n");
         obj_stack_frame_pop();
     }
+    obj_stack_frame_pop();
 
     return 0;
 }
