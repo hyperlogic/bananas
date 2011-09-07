@@ -142,11 +142,11 @@
                      (list-tail ls k1))
            #inert)))
 
-;
-; digression:
-;   math applicatives max and lcm are used by map, so must be provided
-;   to test map, and without using anything derived later than map
-;
+;; ;
+;; ; digression:
+;; ;   math applicatives max and lcm are used by map, so must be provided
+;; ;   to test map, and without using anything derived later than map
+;; ;
 
 ($define! max
    ($lambda x
@@ -204,9 +204,9 @@
                         1
                         x))))
 
-;
-; now, back to core derivations
-;
+;; ;
+;; ; now, back to core derivations
+;; ;
 
 ($define! map
    (wrap ($vau (appv . lss) env
@@ -285,355 +285,355 @@
              ((eval (car x) e)  #t)
              (#t                (apply (wrap $or?) (cdr x) e)))))
 
-($define! combiner?
-   ($lambda x
-      (apply and? (map ($lambda (x)
-                          (or? (applicative? x)
-                               (operative? x)))
-                       x))))
+;; ($define! combiner?
+;;    ($lambda x
+;;       (apply and? (map ($lambda (x)
+;;                           (or? (applicative? x)
+;;                                (operative? x)))
+;;                        x))))
 
-($define! length
-   ($lambda (object)
-      ($let (((#ignore #ignore a c)  (get-list-metrics object)))
-         ($if (>? c 0)
-              #e+infinity
-              a))))
+;; ($define! length
+;;    ($lambda (object)
+;;       ($let (((#ignore #ignore a c)  (get-list-metrics object)))
+;;          ($if (>? c 0)
+;;               #e+infinity
+;;               a))))
 
-($define! list-ref
-   ($lambda (ls k)
-      (car (list-tail ls k))))
+;; ($define! list-ref
+;;    ($lambda (ls k)
+;;       (car (list-tail ls k))))
 
-($define! append
-   ($lambda lss
+;; ($define! append
+;;    ($lambda lss
 
-      ($define! set-last!
-         ($lambda (ls tail) ; set cdr of last pair of ls to tail
-            ($let ((next  (cdr ls)))
-               ($if (pair? next)
-                    (set-last! next tail)
-                    (set-cdr! ls tail)))))
+;;       ($define! set-last!
+;;          ($lambda (ls tail) ; set cdr of last pair of ls to tail
+;;             ($let ((next  (cdr ls)))
+;;                ($if (pair? next)
+;;                     (set-last! next tail)
+;;                     (set-cdr! ls tail)))))
 
-      ($define! aux2
-         ($lambda (ls tail) ; prepend ls onto tail
-            ($if (null? ls)
-                 tail
-                 (cons (car ls) (aux2 (cdr ls) tail)))))
+;;       ($define! aux2
+;;          ($lambda (ls tail) ; prepend ls onto tail
+;;             ($if (null? ls)
+;;                  tail
+;;                  (cons (car ls) (aux2 (cdr ls) tail)))))
 
-      ($define! aux1
-         ($lambda (k lss tail) ; prepend k elmts of lss onto tail
-            ($if (>? k 0)
-                 (aux2 (car lss)
-                       (aux1 (- k 1) (cdr lss) tail))
-                 tail)))
+;;       ($define! aux1
+;;          ($lambda (k lss tail) ; prepend k elmts of lss onto tail
+;;             ($if (>? k 0)
+;;                  (aux2 (car lss)
+;;                        (aux1 (- k 1) (cdr lss) tail))
+;;                  tail)))
 
-      ($if (null? lss)
-           ()
-           ($let (((#ignore #ignore a c)
-                     (get-list-metrics lss)))
-              ($if (>? c 0)
-                   ($let ((cycle  (aux1 c (list-tail lss a) ())))
-                      ($cond ((pair? cycle)
-                                (set-last! cycle cycle)))
-                      (aux1 a lss cycle))
-                   (aux1 (- a 1) lss (list-ref lss (- a 1))))))))
+;;       ($if (null? lss)
+;;            ()
+;;            ($let (((#ignore #ignore a c)
+;;                      (get-list-metrics lss)))
+;;               ($if (>? c 0)
+;;                    ($let ((cycle  (aux1 c (list-tail lss a) ())))
+;;                       ($cond ((pair? cycle)
+;;                                 (set-last! cycle cycle)))
+;;                       (aux1 a lss cycle))
+;;                    (aux1 (- a 1) lss (list-ref lss (- a 1))))))))
 
-($define! list-neighbors
-   ($lambda (ls)
+;; ($define! list-neighbors
+;;    ($lambda (ls)
 
-      ($define! aux
-         ($lambda (ls n) ; get n sets of neighbors from ls
-            ($if (>? n 0)
-                 (cons (list (car ls) (cadr ls))
-                       (aux (cdr ls) (- n 1)))
-                 ())))
+;;       ($define! aux
+;;          ($lambda (ls n) ; get n sets of neighbors from ls
+;;             ($if (>? n 0)
+;;                  (cons (list (car ls) (cadr ls))
+;;                        (aux (cdr ls) (- n 1)))
+;;                  ())))
 
-      ($let (((p #ignore a c)  (get-list-metrics ls)))
-         ($if (=? c 0)
-              (aux ls (- a 1))
-              ($let ((ls  (aux ls p)))
-                 (encycle! ls a c)
-                 ls)))))
+;;       ($let (((p #ignore a c)  (get-list-metrics ls)))
+;;          ($if (=? c 0)
+;;               (aux ls (- a 1))
+;;               ($let ((ls  (aux ls p)))
+;;                  (encycle! ls a c)
+;;                  ls)))))
 
-($define! filter
-   ($lambda (accept? ls)
-      (apply append
-             (map ($lambda (x)
-                     ($if (apply accept? (list x))
-                          (list x)
-                          ()))
-                  ls))))
+;; ($define! filter
+;;    ($lambda (accept? ls)
+;;       (apply append
+;;              (map ($lambda (x)
+;;                      ($if (apply accept? (list x))
+;;                           (list x)
+;;                           ()))
+;;                   ls))))
 
-($define! assoc
-   ($lambda (object alist)
-      ($let ((alist  (filter ($lambda (record)
-                                (equal? object (car record)))
-                             alist)))
-         ($if (null? alist)
-              ()
-              (car alist)))))
+;; ($define! assoc
+;;    ($lambda (object alist)
+;;       ($let ((alist  (filter ($lambda (record)
+;;                                 (equal? object (car record)))
+;;                              alist)))
+;;          ($if (null? alist)
+;;               ()
+;;               (car alist)))))
 
-($define! member?
-   ($lambda (object ls)
-      (apply or?
-             (map ($lambda (x) (equal? object x))
-                  ls))))
+;; ($define! member?
+;;    ($lambda (object ls)
+;;       (apply or?
+;;              (map ($lambda (x) (equal? object x))
+;;                   ls))))
 
-($define! finite-list?
-   ($lambda args
-      (apply and?
-             (map ($lambda (x)
-                     ($let (((#ignore n . #ignore)
-                               (get-list-metrics x)))
-                        (>? n 0)))
-                  args))))
+;; ($define! finite-list?
+;;    ($lambda args
+;;       (apply and?
+;;              (map ($lambda (x)
+;;                      ($let (((#ignore n . #ignore)
+;;                                (get-list-metrics x)))
+;;                         (>? n 0)))
+;;                   args))))
 
-($define! countable-list?
-   ($lambda args
-      (apply and?
-             (map ($lambda (x)
-                     ($let (((#ignore n #ignore c)
-                             (get-list-metrics x)))
-                        ($or? (>? c 0)
-                              (>? n 0))))
-                  args))))
+;; ($define! countable-list?
+;;    ($lambda args
+;;       (apply and?
+;;              (map ($lambda (x)
+;;                      ($let (((#ignore n #ignore c)
+;;                              (get-list-metrics x)))
+;;                         ($or? (>? c 0)
+;;                               (>? n 0))))
+;;                   args))))
 
-($define! reduce
-   ($let ()
+;; ($define! reduce
+;;    ($let ()
 
-      ($define! reduce-acyclic
-         ($lambda (ls bin id)
-            ($cond ((null? ls)        id)
-                   ((null? (cdr ls))  (car ls))
-                   (#t
-                      (bin (car ls)
-                           (reduce-acyclic (cdr ls) bin id))))))
+;;       ($define! reduce-acyclic
+;;          ($lambda (ls bin id)
+;;             ($cond ((null? ls)        id)
+;;                    ((null? (cdr ls))  (car ls))
+;;                    (#t
+;;                       (bin (car ls)
+;;                            (reduce-acyclic (cdr ls) bin id))))))
 
-      ($define! reduce-n
-         ($lambda (ls bin n)
-            ($if (=? n 1)
-                 (car ls)
-                 (bin (car ls)
-                      (reduce-n (cdr ls) bin (- n 1))))))
+;;       ($define! reduce-n
+;;          ($lambda (ls bin n)
+;;             ($if (=? n 1)
+;;                  (car ls)
+;;                  (bin (car ls)
+;;                       (reduce-n (cdr ls) bin (- n 1))))))
 
-      (wrap ($vau (ls bin id . opt) env
+;;       (wrap ($vau (ls bin id . opt) env
 
-         ($define! fixenv
-            ($lambda (appv)
-               ($lambda x (apply appv x env))))
+;;          ($define! fixenv
+;;             ($lambda (appv)
+;;                ($lambda x (apply appv x env))))
 
-         ($define! bin (fixenv bin))
+;;          ($define! bin (fixenv bin))
 
-         ($let (((p n a c)  (get-list-metrics ls)))
-            ($if (=? c 0)
-                 (reduce-acyclic ls bin id)
-                 ($sequence
-                    ($define! (pre in post) (map fixenv opt))
-                    ($define! reduced-cycle
-                       (post (reduce-n (map pre (list-tail ls a))
-                                       in
-                                       c)))
-                    ($if (=? a 0)
-                         reduced-cycle
-                         (bin (reduce-n ls bin a)
-                              reduced-cycle)))))))))
+;;          ($let (((p n a c)  (get-list-metrics ls)))
+;;             ($if (=? c 0)
+;;                  (reduce-acyclic ls bin id)
+;;                  ($sequence
+;;                     ($define! (pre in post) (map fixenv opt))
+;;                     ($define! reduced-cycle
+;;                        (post (reduce-n (map pre (list-tail ls a))
+;;                                        in
+;;                                        c)))
+;;                     ($if (=? a 0)
+;;                          reduced-cycle
+;;                          (bin (reduce-n ls bin a)
+;;                               reduced-cycle)))))))))
 
-($define! append!
-   ($lambda lss
+;; ($define! append!
+;;    ($lambda lss
 
-      ($define! set-last!
-         ($lambda (ls tail)
-            ($let ((next  (cdr ls)))
-               ($if (pair? next)
-                    (set-last! next tail)
-                    (set-cdr! ls tail)))))
+;;       ($define! set-last!
+;;          ($lambda (ls tail)
+;;             ($let ((next  (cdr ls)))
+;;                ($if (pair? next)
+;;                     (set-last! next tail)
+;;                     (set-cdr! ls tail)))))
 
-      (map ($lambda (x) (apply set-last! x))
-           (list-neighbors (filter ($lambda (x)
-                                      (not? (null? x)))
-                                   lss)))
-      #inert))
+;;       (map ($lambda (x) (apply set-last! x))
+;;            (list-neighbors (filter ($lambda (x)
+;;                                       (not? (null? x)))
+;;                                    lss)))
+;;       #inert))
 
-;; commented out because:  wow, this is slow.
-;
-; ($define! copy-es
-;    ($lambda (x)
-; 
-;       ($define! aux
-;          ($lambda (x alist)
-;             ($if (not? (pair? x))
-;                  (list x alist)
-;                  ($let ((record  (assoc x alist)))
-;                   ($if (pair? record)
-;                        (list (cdr record) alist)
-;                        ($let ((y  (cons () ())))
-;                         ($let ((alist  (cons (cons x y) alist)))
-;                          ($let (((z alist)  (aux (car x) alist)))
-;                           (set-car! y z)
-;                           ($let (((z alist)  (aux (cdr x) alist)))
-;                            (set-cdr! y z)
-;                            (list y alist))))))))))
-; 
-;       (car (aux x ()))))
-;
-;;
+;; ;; commented out because:  wow, this is slow.
+;; ;
+;; ; ($define! copy-es
+;; ;    ($lambda (x)
+;; ; 
+;; ;       ($define! aux
+;; ;          ($lambda (x alist)
+;; ;             ($if (not? (pair? x))
+;; ;                  (list x alist)
+;; ;                  ($let ((record  (assoc x alist)))
+;; ;                   ($if (pair? record)
+;; ;                        (list (cdr record) alist)
+;; ;                        ($let ((y  (cons () ())))
+;; ;                         ($let ((alist  (cons (cons x y) alist)))
+;; ;                          ($let (((z alist)  (aux (car x) alist)))
+;; ;                           (set-car! y z)
+;; ;                           ($let (((z alist)  (aux (cdr x) alist)))
+;; ;                            (set-cdr! y z)
+;; ;                            (list y alist))))))))))
+;; ; 
+;; ;       (car (aux x ()))))
+;; ;
+;; ;;
 
-($define! assq
-   ($lambda (object alist)
-      ($let ((alist (filter ($lambda (record)
-                               (eq? object (car record)))
-                            alist)))
-         ($if (null? alist)
-              ()
-              (car alist)))))
+;; ($define! assq
+;;    ($lambda (object alist)
+;;       ($let ((alist (filter ($lambda (record)
+;;                                (eq? object (car record)))
+;;                             alist)))
+;;          ($if (null? alist)
+;;               ()
+;;               (car alist)))))
 
-($define! memq?
-   ($lambda (object ls)
-      (apply or?
-             (map ($lambda (x) (eq? object x))
-                  ls))))
+;; ($define! memq?
+;;    ($lambda (object ls)
+;;       (apply or?
+;;              (map ($lambda (x) (eq? object x))
+;;                   ls))))
 
-($define! eq?
-   ($let ((old-eq?  eq?))
-      ($lambda x
-         ($if ($and? (pair? x) (pair? (cdr x)) (null? (cddr x)))
-              (apply old-eq? x)
-              (apply and?
-                     (map ($lambda (x) (apply old-eq? x))
-                          (list-neighbors x)))))))
-($define! equal?
-   ($let ((old-equal?  equal?))
-      ($lambda x
-         ($if ($and? (pair? x) (pair? (cdr x)) (null? (cddr x)))
-              (apply old-equal? x)
-              (apply and?
-                     (map ($lambda (x) (apply old-equal? x))
-                          (list-neighbors x)))))))
+;; ($define! eq?
+;;    ($let ((old-eq?  eq?))
+;;       ($lambda x
+;;          ($if ($and? (pair? x) (pair? (cdr x)) (null? (cddr x)))
+;;               (apply old-eq? x)
+;;               (apply and?
+;;                      (map ($lambda (x) (apply old-eq? x))
+;;                           (list-neighbors x)))))))
+;; ($define! equal?
+;;    ($let ((old-equal?  equal?))
+;;       ($lambda x
+;;          ($if ($and? (pair? x) (pair? (cdr x)) (null? (cddr x)))
+;;               (apply old-equal? x)
+;;               (apply and?
+;;                      (map ($lambda (x) (apply old-equal? x))
+;;                           (list-neighbors x)))))))
 
-($define! $binds?
-   ($vau (exp . ss) dynamic
-      (guard-dynamic-extent
-         ()
-         ($lambda ()
-                  ($let ((env  (eval exp dynamic)))
-                     (map ($lambda (sym) (eval sym env))
-                          ss))
-                  #t)
-         (list (list error-continuation
-                     ($lambda (%ignore divert)
-                        (apply divert #f)))))))
+;; ($define! $binds?
+;;    ($vau (exp . ss) dynamic
+;;       (guard-dynamic-extent
+;;          ()
+;;          ($lambda ()
+;;                   ($let ((env  (eval exp dynamic)))
+;;                      (map ($lambda (sym) (eval sym env))
+;;                           ss))
+;;                   #t)
+;;          (list (list error-continuation
+;;                      ($lambda (%ignore divert)
+;;                         (apply divert #f)))))))
 
-($define! get-current-environment (wrap ($vau () e e)))
+;; ($define! get-current-environment (wrap ($vau () e e)))
 
-($define! make-kernel-standard-environment
-   ($lambda () (get-current-environment)))
+;; ($define! make-kernel-standard-environment
+;;    ($lambda () (get-current-environment)))
 
-($define! $let*
-   ($vau (bindings . body) env
-      (eval ($if (null? bindings)
-                 (list* $let bindings body)
-                 (list $let
-                       (list (car bindings))
-                       (list* $let* (cdr bindings) body)))
-            env)))
+;; ($define! $let*
+;;    ($vau (bindings . body) env
+;;       (eval ($if (null? bindings)
+;;                  (list* $let bindings body)
+;;                  (list $let
+;;                        (list (car bindings))
+;;                        (list* $let* (cdr bindings) body)))
+;;             env)))
 
-($define! $letrec
-   ($vau (bindings . body) env
-      (eval (list* $let ()
-                   (list $define!
-                         (map car bindings)
-                         (list* list (map cadr bindings)))
-                   body)
-            env)))
+;; ($define! $letrec
+;;    ($vau (bindings . body) env
+;;       (eval (list* $let ()
+;;                    (list $define!
+;;                          (map car bindings)
+;;                          (list* list (map cadr bindings)))
+;;                    body)
+;;             env)))
 
-($define! $letrec*
-   ($vau (bindings . body) env
-      (eval ($if (null? bindings)
-                 (list* $letrec bindings body)
-                 (list $letrec
-                       (list (car bindings))
-                       (list* $letrec* (cdr bindings) body)))
-            env)))
+;; ($define! $letrec*
+;;    ($vau (bindings . body) env
+;;       (eval ($if (null? bindings)
+;;                  (list* $letrec bindings body)
+;;                  (list $letrec
+;;                        (list (car bindings))
+;;                        (list* $letrec* (cdr bindings) body)))
+;;             env)))
 
-($define! $let-redirect
-   ($vau (exp bindings . body) env
-      (eval (list* (eval (list* $lambda (map car bindings) body)
-                         (eval exp
-                               env))
-                   (map cadr bindings))
-            env)))
+;; ($define! $let-redirect
+;;    ($vau (exp bindings . body) env
+;;       (eval (list* (eval (list* $lambda (map car bindings) body)
+;;                          (eval exp
+;;                                env))
+;;                    (map cadr bindings))
+;;             env)))
 
-($define! $let-safe
-   ($vau (bindings . body) env
-      (eval (list* $let-redirect
-                   (make-kernel-standard-environment)
-                   bindings
-                   body)
-             env)))
+;; ($define! $let-safe
+;;    ($vau (bindings . body) env
+;;       (eval (list* $let-redirect
+;;                    (make-kernel-standard-environment)
+;;                    bindings
+;;                    body)
+;;              env)))
 
-($define! $remote-eval
-   ($vau (o e) d
-      (eval o (eval e d))))
+;; ($define! $remote-eval
+;;    ($vau (o e) d
+;;       (eval o (eval e d))))
 
-($define! $bindings->environment
-   ($vau bindings denv
-      (eval (list $let-redirect
-                  (make-environment)
-                  bindings
-                  (list get-current-environment))
-            denv)))
+;; ($define! $bindings->environment
+;;    ($vau bindings denv
+;;       (eval (list $let-redirect
+;;                   (make-environment)
+;;                   bindings
+;;                   (list get-current-environment))
+;;             denv)))
 
-($define! $set!
-   ($vau (exp1 formals exp2) env
-      (eval (list $define! formals
-                  (list (unwrap eval) exp2 env))
-            (eval exp1 env))))
+;; ($define! $set!
+;;    ($vau (exp1 formals exp2) env
+;;       (eval (list $define! formals
+;;                   (list (unwrap eval) exp2 env))
+;;             (eval exp1 env))))
 
-($define! $provide!
-   ($vau (symbols . body) env
-      (eval (list $define! symbols
-               (list $let ()
-                  (list* $sequence body)
-                  (list* list symbols)))
-            env)))
+;; ($define! $provide!
+;;    ($vau (symbols . body) env
+;;       (eval (list $define! symbols
+;;                (list $let ()
+;;                   (list* $sequence body)
+;;                   (list* list symbols)))
+;;             env)))
 
-($define! $import!
-   ($vau (exp . symbols) env
-      (eval (list $set!
-                  env
-                  symbols
-                  (cons list symbols))
-            (eval exp env))))
+;; ($define! $import!
+;;    ($vau (exp . symbols) env
+;;       (eval (list $set!
+;;                   env
+;;                   symbols
+;;                   (cons list symbols))
+;;             (eval exp env))))
 
-($define! for-each
-   (wrap ($vau x env
-            (apply map x env)
-            #inert)))
+;; ($define! for-each
+;;    (wrap ($vau x env
+;;             (apply map x env)
+;;             #inert)))
 
-($define! min
-   ($lambda x
+;; ($define! min
+;;    ($lambda x
 
-      ($define! aux
-         ($lambda (count result . x)
-            ($if (<=? count 0)
-                 result
-                 ($sequence
-                    ($if (<? (car x) result)
-                         ($define! result ($if (inexact? result)
-                                               (* (car x) 1.0)
-                                               (car x)))
-                         ($if (inexact? (car x))
-                              ($define! result (* result 1.0))
-                              #inert))
-                    (apply aux (list* (- count 1) result (cdr x)))))))
+;;       ($define! aux
+;;          ($lambda (count result . x)
+;;             ($if (<=? count 0)
+;;                  result
+;;                  ($sequence
+;;                     ($if (<? (car x) result)
+;;                          ($define! result ($if (inexact? result)
+;;                                                (* (car x) 1.0)
+;;                                                (car x)))
+;;                          ($if (inexact? (car x))
+;;                               ($define! result (* result 1.0))
+;;                               #inert))
+;;                     (apply aux (list* (- count 1) result (cdr x)))))))
 
-      (apply aux (list* (car (get-list-metrics x))
-                        #e+infinity
-                        x))))
+;;       (apply aux (list* (car (get-list-metrics x))
+;;                         #e+infinity
+;;                         x))))
 
-($define! get-module
-   ($lambda (filename . opt)
-      ($let ((env  (make-kernel-standard-environment)))
-         ($cond ((pair? opt)
-                   ($set! env module-parameters (car opt))))
-         (eval (list load filename) env)
-         env)))
+;; ($define! get-module
+;;    ($lambda (filename . opt)
+;;       ($let ((env  (make-kernel-standard-environment)))
+;;          ($cond ((pair? opt)
+;;                    ($set! env module-parameters (car opt))))
+;;          (eval (list load filename) env)
+;;          env)))

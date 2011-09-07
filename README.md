@@ -3,9 +3,6 @@ Bananas
 
 Monkeys love bananas, parenthesis, not so much.
 
-Left off debugging the gc-ifying of prim.c
-Soo close.... assert during defining of $sequence.
-
 Ref Counting Notes
 --------------------
 All objects are ref-counted.
@@ -55,14 +52,9 @@ Garbage-Collection (Mark and sweep)
 
 Fix these Leaks/Bugs
 -----------------
-* (get-list-metrics) - 18 nodes
-* (list*) - 8 nodes! wtf?
-* (list* 1) - 10 nodes!
-* (max 1 2)
-* (or? #f) - leaks 784 nodes! wtf?!?
-* (length '(1 2 3 4 5 6 7))  - runs out of memory wtf?!??
-* (length '(1 2 3 4 5 6) - leaks 4329 nodes?!?!!?
-* (eq? #t #f) - 196 nodes?!!?!?!?!?!  advanced version in bootstrap.ooo
+* (list*) - 148 nodes! wtf?
+* (get-list-metrics) - 350 nodes!
+* (or? #f) - leaks 11629 nodes! OMFG
 
 Code Cleanup
 ----------------
@@ -115,6 +107,61 @@ Core types and primitive features
 
 Core library features
 ------------------------------
-* $sequence
+$sequence - in obj.c
+
+See bootstrap.ooo for the rest.
+
 * list
 * list*
+* $vau - this version accepts multiple expressions, like a sequence.
+* $lambda
+* car
+* cdr
+* caar, cdar etc.
+* apply
+* $cond
+* get-list-metrics
+* list-tail
+* encycle!
+* max
+* lcm
+* map
+* $let
+* not?
+* and?
+* or?
+* $and?
+* combiner?
+* length
+* list-ref
+* append
+* list-neighbors
+* filter
+* assoc
+* member?
+* finite-list?
+* countable-list?
+* reduce
+* append!
+* copy-es
+* assq
+* memq?
+* eq? - this versions takes zero or more arguments
+* equal? - zero or more arguments
+* $binds?
+* get-current-environment
+* make-kernel-standard-environment
+* $let*
+* $letrec
+* $let-redirect
+* $let-safe
+* $remote-eval
+* $bindings->environment
+* $set!
+* $provide!
+* $import!
+* for-each
+* min
+* get-module
+
+

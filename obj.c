@@ -12,7 +12,7 @@
 
 // static object pool
 //#define MAX_OBJS 131072 * 2  // 16 meg
-#define MAX_OBJS 10000
+#define MAX_OBJS 200000
 obj_t g_obj_pool[MAX_OBJS];
 
 // free list
@@ -27,8 +27,8 @@ int g_num_used_objs = 0;
 obj_t* g_env = KNULL;
 
 // root stack
-#define MAX_STACK_OBJS 1000
-#define MAX_STACK_FRAMES 50
+#define MAX_STACK_OBJS 3000
+#define MAX_STACK_FRAMES 3000
 obj_t* g_stack[MAX_STACK_OBJS];
 int g_num_stack_objs;
 int g_stack_frames[MAX_STACK_FRAMES];
@@ -148,7 +148,7 @@ static void _gc_mark(obj_t* obj)
             _gc_mark(obj->data.compound_operative.formals);
             _gc_mark(obj->data.compound_operative.eformal);
             _gc_mark(obj->data.compound_operative.static_env);
-            _gc_mark(obj->data.compound_operative.static_env);
+            _gc_mark(obj->data.compound_operative.body);
             break;
         case APPLICATIVE_OBJ:
             _gc_mark(obj->data.applicative.operative);
@@ -378,6 +378,12 @@ obj_t* obj_make_applicative(obj_t* operative)
 //
 // obj type predicates
 //
+
+int obj_is_garbage(obj_t* obj) // for debugging gc
+{
+    assert(obj);
+    return !obj_is_immediate(obj) && obj->type == GARBAGE_OBJ;
+}
 
 int obj_is_immediate(obj_t* obj)
 {
@@ -656,6 +662,7 @@ obj_t* obj_eval_expr(obj_t* obj, obj_t* env)
     obj_stack_frame_push();
     obj_stack_push(obj_cons(obj, KNULL));
     obj_t* result = $eval(obj_stack_get(0), env);
+    assert(!obj_is_garbage(result));
     obj_stack_frame_pop();
     return result;
 }
@@ -665,6 +672,7 @@ obj_t* obj_eval_str(const char* str, obj_t* env)
     obj_stack_frame_push();
     obj_stack_push(read(str));
     obj_t* result = obj_eval_expr(obj_stack_get(0), env);
+    assert(!obj_is_garbage(result));
     obj_stack_frame_pop();
     return result;
 }
@@ -713,7 +721,6 @@ void obj_init()
     // define $sequence first.
     obj_eval_str(seq_str, g_env);
 
-    /*
     // bootstrap
     obj_stack_frame_push();
     obj_stack_push(read_file("bootstrap.ooo"));
@@ -725,5 +732,4 @@ void obj_init()
     obj_stack_push(read_file("unit-test.ooo"));
     obj_eval_expr(obj_stack_get(0), g_env);
     obj_stack_frame_pop();
-    */
 }

@@ -85,6 +85,7 @@ obj_t* obj_make_applicative(obj_t* operative);
 
 // obj type predicates
 // none of these will trigger a gc.
+int obj_is_garbage(obj_t* obj);  // for debugging gc
 int obj_is_immediate(obj_t* obj);
 int obj_is_inert(obj_t* obj);
 int obj_is_ignore(obj_t* obj);

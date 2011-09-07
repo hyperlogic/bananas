@@ -146,9 +146,13 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
 {
     assert(obj);
     assert(obj_is_environment(env));
+    assert(!obj_is_garbage(obj));
 
     if (obj_is_symbol(obj)) {
-        return obj_env_lookup(env, obj);
+        obj_t* result = obj_env_lookup(env, obj);
+        assert(!obj_is_garbage(result));
+        return result;
+        assert(!obj_is_garbage(result));
     } else if (obj_is_pair(obj)) {
         obj_stack_frame_push();
         obj_stack_push(_eval(obj_car(obj), env));  // 0 : f
@@ -157,7 +161,9 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
         if (obj_is_operative(f)) {
             if (obj_is_prim_operative(f)) {
                 obj_t* result = f->data.prim_operative(d, env);
+                assert(!obj_is_garbage(result));
                 obj_stack_frame_pop();
+                assert(!obj_is_garbage(result));
                 return result;
             } else {
                 assert(obj_is_compound_operative(f));
@@ -171,7 +177,9 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
                 if (obj_is_symbol(eformal))
                     obj_env_define(local_env, eformal, env);
                 obj_t* result = _eval(body, local_env);
+                assert(!obj_is_garbage(result));
                 obj_stack_frame_pop();
+                assert(!obj_is_garbage(result));
                 return result;
             }
         } else if (obj_is_applicative(f)) {
@@ -183,7 +191,9 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
             // return eval cons(f' d') in env
             obj_stack_push(obj_cons(ff, dd)); // 2 : (cons ff dd)
             obj_t* result = _eval(obj_stack_get(2), env);
+            assert(!obj_is_garbage(result));
             obj_stack_frame_pop();
+            assert(!obj_is_garbage(result));
             return result;
         } else {
             fprintf(stderr, "ERROR: f is not a applicative or operative\n");
@@ -199,8 +209,10 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
 obj_t* $define(obj_t* obj, obj_t* env)
 {
     obj_t* param_tree = obj_car(obj);
-    obj_t* value_tree = _eval(obj_car(obj_cdr(obj)), env);
-    _match(param_tree, value_tree, env);
+    obj_stack_frame_push();
+    obj_stack_push(_eval(obj_car(obj_cdr(obj)), env));
+    _match(param_tree, obj_stack_get(0), env);
+    obj_stack_frame_pop();
     return KINERT;
 }
 
@@ -208,10 +220,17 @@ obj_t* $eval(obj_t* obj, obj_t* env)
 {
     obj_t* a = obj_car(obj);
     obj_t* d = obj_cdr(obj);
-    if (obj_is_pair(d))
-        return _eval(a, obj_car(obj_cdr(obj)));
-    else
-        return _eval(a, env);
+    obj_t* result;
+    if (obj_is_pair(d)) {
+        result = _eval(a, obj_car(obj_cdr(obj)));
+        assert(!obj_is_garbage(result));
+    }
+    else {
+        result = _eval(a, env);
+        assert(!obj_is_garbage(result));
+    }
+
+    return result;
 }
 
 obj_t* $if(obj_t* obj, obj_t* env)
