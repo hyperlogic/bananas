@@ -11,8 +11,7 @@
 #include <math.h>
 
 // static object pool
-//#define MAX_OBJS 131072 * 2  // 16 meg
-#define MAX_OBJS 200000
+#define MAX_OBJS 131072 * 4  // 16 meg
 obj_t g_obj_pool[MAX_OBJS];
 
 // free list
@@ -27,7 +26,7 @@ int g_num_used_objs = 0;
 obj_t* g_env = KNULL;
 
 // root stack
-#define MAX_STACK_OBJS 3000
+#define MAX_STACK_OBJS 30000
 #define MAX_STACK_FRAMES 3000
 obj_t* g_stack[MAX_STACK_OBJS];
 int g_num_stack_objs;
@@ -57,10 +56,12 @@ static obj_t* _pool_alloc()
 {
     // TODO: REMOVE
     // Really hammer on gc...
+    /*
     static int count = 0;
     if (count >= 1)
         obj_gc();
     count++;
+    */
 
     if (!g_free_objs)
         obj_gc();
@@ -86,6 +87,17 @@ static obj_t* _pool_alloc()
     return obj;
 }
 
+static void _dump_list(const char* desc, obj_t* obj)
+{
+    printf("%s = [", desc);
+    obj_t* p = obj;
+    while (p) {
+        printf(" <%p prev = %p, next = %p> ", p, p->prev, p->next);
+        p = p->next;
+    }
+    printf("]\n");
+}
+
 static void _pool_free(obj_t* obj)
 {
 #ifdef GC_DEBUG
@@ -100,7 +112,7 @@ static void _pool_free(obj_t* obj)
     if (obj->prev)
         obj->prev->next = obj->next;
     else
-        g_used_objs = NULL;
+        g_used_objs = obj->next;
     if (obj->next)
         obj->next->prev = obj->prev;
     g_num_used_objs--;
@@ -115,6 +127,72 @@ static void _pool_free(obj_t* obj)
     obj->type = GARBAGE_OBJ;
 
     assert(g_num_used_objs + g_num_free_objs == MAX_OBJS);
+}
+
+//
+// pool unit test
+//
+
+static int _pool_num_free()
+{
+    int num_free = 0;
+    obj_t* free_objs = g_free_objs;
+    while (free_objs) {
+        num_free++;
+        free_objs = free_objs->next;
+    }
+    assert(g_num_free_objs == num_free);
+    return num_free;
+}
+
+static int _pool_num_used()
+{
+    int num_used = 0;
+    obj_t* used_objs = g_used_objs;
+    while (used_objs) {
+        num_used++;
+        used_objs = used_objs->next;
+    }
+    assert(g_num_used_objs == num_used);
+    return num_used;
+}
+
+static void _pool_unit_test()
+{
+    assert(_pool_num_free() == MAX_OBJS);
+    assert(_pool_num_used() == 0);
+
+    // add 1 then remove
+    obj_t* obj = _pool_alloc();
+
+    assert(_pool_num_free() == MAX_OBJS - 1);
+    assert(_pool_num_used() == 1);
+
+    _pool_free(obj);
+
+    assert(_pool_num_free() == MAX_OBJS);
+    assert(_pool_num_used() == 0);
+
+    // add 10 then remove in weird order
+#define UNIT_OBJS 10
+    obj_t* objs[UNIT_OBJS];
+    int i;
+    for (i = 0; i < UNIT_OBJS; i++) {
+        objs[i] = _pool_alloc();
+    }
+
+    assert(_pool_num_free() == MAX_OBJS - UNIT_OBJS);
+    assert(_pool_num_used() == UNIT_OBJS);
+
+    int order[UNIT_OBJS] = {0, 2, 4, 6, 8, 9, 7, 5, 3, 1};
+
+    for (i = UNIT_OBJS - 1; i >= 0; i--) {
+        _pool_free(objs[order[i]]);
+    }
+
+    assert(_pool_num_free() == MAX_OBJS);
+    assert(_pool_num_used() == 0);
+#undef UNIT_OBJS
 }
 
 //
@@ -173,12 +251,17 @@ void obj_gc()
 
     // sweep phase
     obj_t* p = g_used_objs;
+    int initial_count = _pool_num_used();
+    int count = initial_count;
     while (p) {
         obj_t* obj = p;
         p = p->next;
-        if (obj->mark != g_mark)
+        if (obj->mark != g_mark) {
             _pool_free(obj);
+            count--;
+        }
     }
+    assert(_pool_num_used() == count);
 }
 
 //
@@ -204,10 +287,11 @@ void obj_stack_frame_pop()
     g_num_stack_objs = g_stack_frames[g_num_stack_frames];
 }
 
-void obj_stack_push(obj_t* obj)
+obj_t* obj_stack_push(obj_t* obj)
 {
     assert(g_num_stack_objs < MAX_STACK_OBJS);  // stack overflow
     g_stack[g_num_stack_objs++] = obj;
+    return obj;
 }
 
 static int _stack_index(int i)
@@ -235,6 +319,23 @@ obj_t* obj_stack_get(int i)
 void obj_stack_set(int i, obj_t* obj)
 {
     g_stack[_stack_index(i)] = obj;
+}
+
+void obj_stack_dump(const char* desc)
+{
+    printf("%s = \n", desc);
+    printf("    stack_frames : [");
+    int i = 0;
+    for (i = 0; i < g_num_stack_frames; i++) {
+        printf(" %d ", g_stack_frames[i]);
+    }
+    printf("]\n");
+
+    printf("    stack_objs : [");
+    for (i = 0; i < g_num_stack_objs; i++) {
+        printf(" %p ", g_stack[i]);
+    }
+    printf("]\n");
 }
 
 //
@@ -471,7 +572,9 @@ int obj_is_applicative(obj_t* obj)
 
 obj_t* obj_cons(obj_t* a, obj_t* b)
 {
-    return obj_make_pair(a, b);
+    PUSHF();
+    PUSH2(a, b);
+    POPF_RET(obj_make_pair(a, b));
 }
 
 obj_t* obj_car(obj_t* obj)
@@ -560,18 +663,19 @@ void obj_env_define(obj_t* env, obj_t* symbol, obj_t* value)
     assert(obj_is_symbol(symbol));
     assert(obj_is_environment(env));
 
-    obj_t* pair = _assq(symbol, env->data.env.plist);
+    PUSHF();
+    PUSH3(env, symbol, value); // 0, 1, 2
+    obj_t* pair = PUSH(_assq(symbol, env->data.env.plist));  // 3
     if (obj_is_null(pair)) {
         // did not find it. so add a new property to the beginning of the plist.
         obj_t* plist = env->data.env.plist;
-        obj_stack_frame_push();
-        obj_stack_push(obj_cons(symbol, value));
-        env->data.env.plist = obj_cons(obj_stack_get(0), plist);
-        obj_stack_frame_pop();
+        obj_t* pair = PUSH(obj_cons(symbol, value)); // 4
+        env->data.env.plist = obj_cons(pair, plist);
     } else {
         // found it, change the value
         obj_set_cdr(pair, value);
     }
+    POPF();
 }
 
 // no gc
@@ -659,29 +763,24 @@ void obj_dump(obj_t* obj, int to_stderr)
 
 obj_t* obj_eval_expr(obj_t* obj, obj_t* env)
 {
-    obj_stack_frame_push();
-    obj_stack_push(obj_cons(obj, KNULL));
-    obj_t* result = $eval(obj_stack_get(0), env);
-    assert(!obj_is_garbage(result));
-    obj_stack_frame_pop();
-    return result;
+    PUSHF();
+    PUSH2(obj, env); // 0, 1
+    obj_t* args = PUSH(obj_cons(obj, KNULL)); // 2
+    POPF_RET($eval(args, env));
 }
 
 obj_t* obj_eval_str(const char* str, obj_t* env)
 {
-    obj_stack_frame_push();
-    obj_stack_push(read(str));
-    obj_t* result = obj_eval_expr(obj_stack_get(0), env);
-    assert(!obj_is_garbage(result));
-    obj_stack_frame_pop();
-    return result;
+    PUSHF();
+    PUSH(env);
+    obj_t* expr = PUSH(read(str));
+    POPF_RET(obj_eval_expr(expr, env));
 }
 
 //
 // interpreter init, this needs happen before any thing else.
 //
 
-// TODO: GC FIX
 void obj_init()
 {
     assert(sizeof(obj_t) == 64);
@@ -689,19 +788,11 @@ void obj_init()
     _stack_init();
 
     _pool_init();
+
     g_env = obj_make_environment(KNULL, KNULL);
 
-    obj_stack_frame_push();
-    obj_stack_push(obj_make_symbol("#e-infinity"));
-    obj_stack_push(obj_make_number(-INFINITY));
-    obj_env_define(g_env, obj_stack_get(0), obj_stack_get(1));
-    obj_stack_frame_pop();
-
-    obj_stack_frame_push();
-    obj_stack_push(obj_make_symbol("#e+infinity"));
-    obj_stack_push(obj_make_number(INFINITY));
-    obj_env_define(g_env, obj_stack_get(0), obj_stack_get(1));
-    obj_stack_frame_pop();
+    obj_env_define(g_env, obj_make_symbol("#e-infinity"), obj_make_number(-INFINITY));
+    obj_env_define(g_env, obj_make_symbol("#e+infinity"), obj_make_number(INFINITY));
 
     prim_init();
 
@@ -722,14 +813,8 @@ void obj_init()
     obj_eval_str(seq_str, g_env);
 
     // bootstrap
-    obj_stack_frame_push();
-    obj_stack_push(read_file("bootstrap.ooo"));
-    obj_eval_expr(obj_stack_get(0), g_env);
-    obj_stack_frame_pop();
+    obj_eval_expr(read_file("bootstrap.ooo"), g_env);
 
     // unit-test  // TODO: isolate this into it's own env.
-    obj_stack_frame_push();
-    obj_stack_push(read_file("unit-test.ooo"));
-    obj_eval_expr(obj_stack_get(0), g_env);
-    obj_stack_frame_pop();
+    obj_eval_expr(read_file("unit-test.ooo"), g_env);
 }

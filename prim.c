@@ -57,18 +57,18 @@ void prim_init()
     prim_info_t* p = s_prim_infos;
     while (p->prim) {
         if (p->wrap) {
-            obj_stack_frame_push();
-            obj_stack_push(obj_make_symbol(p->name));
-            obj_stack_push(obj_make_prim_operative(p->prim));
-            obj_stack_push(obj_make_applicative(obj_stack_get(1)));
-            obj_env_define(g_env, obj_stack_get(0), obj_stack_get(2));
-            obj_stack_frame_pop();
+            PUSHF();
+            obj_t* symbol = PUSH(obj_make_symbol(p->name));
+            obj_t* op = PUSH(obj_make_prim_operative(p->prim));
+            obj_t* app = PUSH(obj_make_applicative(op));
+            obj_env_define(g_env, symbol, app);
+            POPF();
         } else {
-            obj_stack_frame_push();
-            obj_stack_push(obj_make_symbol(p->name));
-            obj_stack_push(obj_make_prim_operative(p->prim));
-            obj_env_define(g_env, obj_stack_get(0), obj_stack_get(1));
-            obj_stack_frame_pop();
+            PUSHF();
+            obj_t* symbol = PUSH(obj_make_symbol(p->name));
+            obj_t* op = PUSH(obj_make_prim_operative(p->prim));
+            obj_env_define(g_env, symbol, op);
+            POPF();
         }
         p++;
     }
@@ -97,8 +97,8 @@ DEF_TYPE_PREDICATE(is_environment)
 DEF_TYPE_PREDICATE(is_operative)
 DEF_TYPE_PREDICATE(is_applicative)
 
-obj_t* $quote(obj_t* obj, obj_t* env) 
-{ 
+obj_t* $quote(obj_t* obj, obj_t* env)
+{
     return obj_car(obj);
 }
 
@@ -131,12 +131,10 @@ static obj_t* _mapcar_eval(obj_t* obj, obj_t* env)
     if (obj_is_null(obj))
         return KNULL;
     else if (obj_is_pair(obj)) {
-        obj_stack_frame_push();
-        obj_stack_push(_eval(obj_car(obj), env));
-        obj_stack_push(_mapcar_eval(obj_cdr(obj), env));
-        obj_t* result = obj_cons(obj_stack_get(0), obj_stack_get(1));
-        obj_stack_frame_pop();
-        return result;
+        PUSHF();
+        obj_t* a = PUSH(_eval(obj_car(obj), env));  // 0
+        obj_t* d = PUSH(_mapcar_eval(obj_cdr(obj), env));  // 1
+        POPF_RET(obj_cons(a, d));
     }
     else
         return _eval(obj, env);
@@ -148,94 +146,74 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
     assert(obj_is_environment(env));
     assert(!obj_is_garbage(obj));
 
+    PUSHF();
+    PUSH2(obj, env);
+
     if (obj_is_symbol(obj)) {
-        obj_t* result = obj_env_lookup(env, obj);
-        assert(!obj_is_garbage(result));
-        return result;
-        assert(!obj_is_garbage(result));
+        POPF_RET(obj_env_lookup(env, obj));
     } else if (obj_is_pair(obj)) {
-        obj_stack_frame_push();
-        obj_stack_push(_eval(obj_car(obj), env));  // 0 : f
-        obj_t* f = obj_stack_get(0);
-        obj_t* d = obj_cdr(obj);
+        obj_t* f = PUSH(_eval(obj_car(obj), env));
+        obj_t* d = PUSH(obj_cdr(obj));
         if (obj_is_operative(f)) {
             if (obj_is_prim_operative(f)) {
-                obj_t* result = f->data.prim_operative(d, env);
-                assert(!obj_is_garbage(result));
-                obj_stack_frame_pop();
-                assert(!obj_is_garbage(result));
-                return result;
+                POPF_RET(f->data.prim_operative(d, env));
             } else {
                 assert(obj_is_compound_operative(f));
                 obj_t* formals = f->data.compound_operative.formals;
                 obj_t* eformal = f->data.compound_operative.eformal;
                 obj_t* body = f->data.compound_operative.body;
                 obj_t* static_env = f->data.compound_operative.static_env;
-                obj_stack_push(obj_make_environment(KNULL, static_env));  // 1 : local_env
-                obj_t* local_env = obj_stack_get(1);
+                obj_t* local_env = PUSH(obj_make_environment(KNULL, static_env));
                 _match(formals, d, local_env);
                 if (obj_is_symbol(eformal))
                     obj_env_define(local_env, eformal, env);
-                obj_t* result = _eval(body, local_env);
-                assert(!obj_is_garbage(result));
-                obj_stack_frame_pop();
-                assert(!obj_is_garbage(result));
-                return result;
+                POPF_RET(_eval(body, local_env));
             }
         } else if (obj_is_applicative(f)) {
             // let dd be the evaluated arguments d in env
-            obj_stack_push(_mapcar_eval(d, env));  // 1 : dd
-            obj_t* dd = obj_stack_get(1);
+            obj_t* dd = PUSH(_mapcar_eval(d, env));
             // let ff be the underlying operative of f
             obj_t* ff = f->data.applicative.operative;
             // return eval cons(f' d') in env
-            obj_stack_push(obj_cons(ff, dd)); // 2 : (cons ff dd)
-            obj_t* result = _eval(obj_stack_get(2), env);
-            assert(!obj_is_garbage(result));
-            obj_stack_frame_pop();
-            assert(!obj_is_garbage(result));
-            return result;
+            obj_t* pair = PUSH(obj_cons(ff, dd));
+            POPF_RET(_eval(pair, env));
         } else {
             fprintf(stderr, "ERROR: f is not a applicative or operative\n");
-            obj_stack_frame_pop();
             assert(0);  // bad f
-            return KNULL;
+            POPF_RET(KNULL);
         }
     } else {
-        return obj;
+        POPF_RET(obj);
     }
 }
 
 obj_t* $define(obj_t* obj, obj_t* env)
 {
+    PUSHF();
+    PUSH2(obj, env);
     obj_t* param_tree = obj_car(obj);
-    obj_stack_frame_push();
-    obj_stack_push(_eval(obj_car(obj_cdr(obj)), env));
-    _match(param_tree, obj_stack_get(0), env);
-    obj_stack_frame_pop();
-    return KINERT;
+    obj_t* ad = PUSH(_eval(obj_car(obj_cdr(obj)), env));
+    _match(param_tree, ad, env);
+    POPF_RET(KINERT);
 }
 
 obj_t* $eval(obj_t* obj, obj_t* env)
 {
+    PUSHF();
+    PUSH2(obj, env);
     obj_t* a = obj_car(obj);
     obj_t* d = obj_cdr(obj);
-    obj_t* result;
-    if (obj_is_pair(d)) {
-        result = _eval(a, obj_car(obj_cdr(obj)));
-        assert(!obj_is_garbage(result));
-    }
-    else {
-        result = _eval(a, env);
-        assert(!obj_is_garbage(result));
-    }
-
-    return result;
+    if (obj_is_pair(d))
+        POPF_RET(_eval(a, obj_car(obj_cdr(obj))));
+    else
+        POPF_RET(_eval(a, env));
 }
 
 obj_t* $if(obj_t* obj, obj_t* env)
 {
-    obj_t* expr = _eval(obj_car(obj), env);
+    PUSHF();
+    PUSH2(obj, env);
+    obj_t* expr = PUSH(_eval(obj_car(obj), env));
     if (!obj_is_boolean(expr)) {
         fprintf(stderr, "Error: result of $if expression is not a boolean\n");
         assert(0);
@@ -243,14 +221,16 @@ obj_t* $if(obj_t* obj, obj_t* env)
     obj_t* true_body = obj_car(obj_cdr(obj));
     obj_t* else_body = obj_car(obj_cdr(obj_cdr(obj)));
     if (expr == KTRUE)
-        return _eval(true_body, env);
+        POPF_RET(_eval(true_body, env));
     else
-        return _eval(else_body, env);
+        POPF_RET(_eval(else_body, env));
 }
 
 obj_t* $cons(obj_t* obj, obj_t* env)
 {
-    return obj_cons(obj_car(obj), obj_car(obj_cdr(obj)));
+    PUSHF();
+    PUSH2(obj, env);
+    POPF_RET(obj_cons(obj_car(obj), obj_car(obj_cdr(obj))));
 }
 
 obj_t* $set_car(obj_t* obj, obj_t* env)
@@ -267,27 +247,36 @@ obj_t* $set_cdr(obj_t* obj, obj_t* env)
 
 obj_t* $make_environment(obj_t* obj, obj_t* env)
 {
+    PUSHF();
+    PUSH2(obj, env);
+
     obj_t* parent;
     if (obj_is_null(obj))
         parent = KNULL;
     else
         parent = obj_car(obj);
-    return obj_make_environment(KNULL, parent);
+
+    POPF_RET(obj_make_environment(KNULL, parent));
 }
 
 obj_t* $vau(obj_t* obj, obj_t* env)
 {
-    return obj_make_compound_operative(obj_car(obj), obj_car(obj_cdr(obj)), 
-                                       obj_car(obj_cdr(obj_cdr(obj))), env);
+    PUSHF();
+    PUSH2(obj, env);
+    POPF_RET(obj_make_compound_operative(obj_car(obj), obj_car(obj_cdr(obj)),
+                                         obj_car(obj_cdr(obj_cdr(obj))), env));
 }
 
 obj_t* $wrap(obj_t* obj, obj_t* env)
 {
+    PUSHF();
+    PUSH2(obj, env);
     if (!obj_is_operative(obj_car(obj))) {
         fprintf(stderr, "ERROR: only operatives can be wrapped\n");
         assert(0);
     }
-    return obj_make_applicative(obj_car(obj));
+
+    POPF_RET(obj_make_applicative(obj_car(obj)));
 }
 
 obj_t* $unwrap(obj_t* obj, obj_t* env)
@@ -303,6 +292,8 @@ obj_t* $unwrap(obj_t* obj, obj_t* env)
 #define MATH_PRIM(name, op)                     \
 obj_t* $##name(obj_t* obj, obj_t* env)          \
 {                                               \
+    PUSHF();                                    \
+    PUSH2(obj, env);                            \
     obj_t* root = obj;                          \
     double accum;                               \
     do {                                        \
@@ -314,7 +305,8 @@ obj_t* $##name(obj_t* obj, obj_t* env)          \
             accum op arg->data.number;          \
         obj = obj_cdr(obj);                     \
     } while (obj_is_pair(obj));                 \
-    return obj_make_number(accum);              \
+                                                \
+    POPF_RET(obj_make_number(accum));           \
 }
 
 MATH_PRIM(add, +=)
@@ -341,9 +333,11 @@ MATH_CMP_PRIM(num_lteq, <=)
 #define MATH_FUNC(name, func)                                   \
 obj_t* $##name(obj_t* obj, obj_t* env)                          \
 {                                                               \
+    PUSHF();                                                    \
+    PUSH2(obj, env);                                            \
     obj_t* a = obj_car(obj);                                    \
     assert(obj_is_number(a));                                   \
-    return obj_make_number(func(a->data.number));               \
+    POPF_RET(obj_make_number(func(a->data.number)));            \
 }
 
 MATH_FUNC(num_abs, fabs)
