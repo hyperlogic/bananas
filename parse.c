@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define PARSE_ERROR(err)                                        \
     do {                                                        \
@@ -23,7 +24,7 @@ void parse_skip_whitespace(const char** pp)
 
         if (PEEK(0) == 0)
             break;
-    
+
         if (PEEK(0) == ';') {
             do {
                 ADVANCE();
@@ -35,7 +36,7 @@ void parse_skip_whitespace(const char** pp)
 obj_t* parse_symbol(const char** pp)
 {
     const char* start = *pp;
-    
+
     // ^[()\s\d]
     if (PEEK(0) == '(' || PEEK(0) == ')' || isspace(PEEK(0)) || isdigit(PEEK(0)))
         PARSE_ERROR("Symbol cannot begin with parenthesis, digits or white-space");
@@ -61,8 +62,12 @@ obj_t* parse_symbol(const char** pp)
             return KINERT;
         else if (len == 7 && strncmp(start + 1, "ignore", len - 1) == 0)
             return KIGNORE;
+        else if (len == 11 && strncmp(start + 1, "e-infinity", len - 1) == 0)
+            return obj_make_number(-INFINITY);
+        else if (len == 11 && strncmp(start + 1, "e+infinity", len - 1) == 0)
+            return obj_make_number(INFINITY);
     }
-    
+
     return obj_make_symbol2(start, *pp);
 }
 
@@ -89,7 +94,7 @@ obj_t* parse_number(const char** pp)
         ADVANCE();
     else
         return obj_make_number2(start, *pp);
-    
+
     // [0-9]*
     while(1) {
         if (isdigit(PEEK(0)))
@@ -117,7 +122,7 @@ obj_t* parse_list(const char** pp)
 {
     // LPAREN ( RPAREN | EXPR+ (PERIOD EXPR)? RPAREN )
 
-    // LPAREN 
+    // LPAREN
     if (PEEK(0) != '(')
         PARSE_ERROR("List must start with left-parenthesis");
     else
@@ -149,7 +154,7 @@ obj_t* parse_list(const char** pp)
             parse_skip_whitespace(pp);
             if (PEEK(0) == '.' || PEEK(0) == ')')
                 break;
-        } while (1);                        
+        } while (1);
 
         // (PERIOD EXPR)?
         if (PEEK(0) == '.') {
@@ -232,7 +237,7 @@ obj_t* read_file(const char* filename)
     FILE* fp = fopen(filename, "r");
     if (!fp)
         return KNULL;
-    
+
 	fseek(fp, 0, SEEK_END);
 	int file_size = ftell(fp);
 	fseek(fp, 0, SEEK_SET);

@@ -8,7 +8,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <math.h>
 
 // static object pool
 #define MAX_OBJS 131072 * 4  // 16 meg
@@ -790,9 +789,6 @@ void obj_init()
     _pool_init();
 
     g_env = obj_make_environment(KNULL, KNULL);
-
-    obj_env_define(g_env, obj_make_symbol("#e-infinity"), obj_make_number(-INFINITY));
-    obj_env_define(g_env, obj_make_symbol("#e+infinity"), obj_make_number(INFINITY));
 
     prim_init();
 
