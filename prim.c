@@ -140,8 +140,17 @@ static obj_t* _mapcar_eval(obj_t* obj, obj_t* env)
         return _eval(obj, env);
 }
 
+#define EVAL_TAIL_CALL(EXPR, ENV)               \
+    do {                                        \
+        obj_stack_frame_pop();                  \
+        obj = EXPR;                             \
+        env = ENV;                              \
+        goto tail_call;                         \
+    } while (0)
+
 static obj_t* _eval(obj_t* obj, obj_t* env)
 {
+tail_call:
     assert(obj);
     assert(obj_is_environment(env));
     assert(!obj_is_garbage(obj));
@@ -167,7 +176,7 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
                 _match(formals, d, local_env);
                 if (obj_is_symbol(eformal))
                     obj_env_define(local_env, eformal, env);
-                POPF_RET(_eval(body, local_env));
+                EVAL_TAIL_CALL(body, local_env);
             }
         } else if (obj_is_applicative(f)) {
             // let dd be the evaluated arguments d in env
@@ -176,7 +185,7 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
             obj_t* ff = f->data.applicative.operative;
             // return eval cons(f' d') in env
             obj_t* pair = PUSH(obj_cons(ff, dd));
-            POPF_RET(_eval(pair, env));
+            EVAL_TAIL_CALL(pair, env);
         } else {
             fprintf(stderr, "ERROR: f is not a applicative or operative\n");
             assert(0);  // bad f
