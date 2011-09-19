@@ -1,28 +1,16 @@
 ;; -*- mode: Lisp; -*-
 
-; for emacs lisp-mode
-; (put '$lambda 'lisp-indent-function 'defun)
-; (put '$vau 'lisp-indent-function 'defun)
-; (put '$define! 'lisp-indent-function 'defun)
-; (put '$seqeunce 'lisp-indent-function 0)
-; (put '$if 'lisp-indent-function 2)
-; (put '$let 'lisp-indent-function 1)
-; (put '$letrec 'lisp-indent-function 1)
+;; ; proper indenting for kernel forms in emacs lisp-mode
+;; (progn
+;;   (put '$lambda 'lisp-indent-function 'defun)
+;;   (put '$vau 'lisp-indent-function 'defun)
+;;   (put '$define! 'lisp-indent-function 'defun)
+;;   (put '$seqeunce 'lisp-indent-function 0)
+;;   (put '$if 'lisp-indent-function 2)
+;;   (put '$let 'lisp-indent-function 1)
+;;   (put '$letrec 'lisp-indent-function 1))
 
 (print 'Welcome!)
-
-;; test for leak
-($define! qqq
-  ($vau () #ignore
-    ($define! aux ($vau () #ignore #t))))
-
-;; wacky vau test
-($define! $static_or_dynamic_eval
-  ($vau (c x) dyn-env
-    ($define! xxx 10.0)
-    ($if (eval c dyn-env)
-        (eval x (get-current-environment))
-      (eval x dyn-env))))
 
 ;; prints expression if it doesn't evaluate to #t
 ($define! $assert
@@ -104,6 +92,106 @@
 ($assert (not? (number? number?)))
 
 ;; pair?
+($assert (not? (pair? #inert)))
+($assert (not? (pair? #ignore)))
+($assert (not? (pair? #f)))
+($assert (not? (pair? ())))
+($assert (not? (pair? 'foo)))
+($assert (not? (pair? 0.0)))
+($assert (pair? '(1 2)))
+($assert (not? (pair? (make-environment))))
+($assert (not? (pair? $if)))
+($assert (not? (pair? number?)))
+
 ;; environment?
+($assert (not? (environment? #inert)))
+($assert (not? (environment? #ignore)))
+($assert (not? (environment? #f)))
+($assert (not? (environment? ())))
+($assert (not? (environment? 'foo)))
+($assert (not? (environment? 0.0)))
+($assert (not? (environment? '(1 2))))
+($assert (environment? (make-environment)))
+($assert (not? (environment? $if)))
+($assert (not? (environment? number?)))
+
 ;; operative?
+($assert (not? (operative? #inert)))
+($assert (not? (operative? #ignore)))
+($assert (not? (operative? #f)))
+($assert (not? (operative? ())))
+($assert (not? (operative? 'foo)))
+($assert (not? (operative? 0.0)))
+($assert (not? (operative? '(1 2))))
+($assert (not? (operative? (make-environment))))
+($assert (operative? $if))
+($assert (not? (operative? number?)))
+
 ;; applicative?
+($assert (not? (applicative? #inert)))
+($assert (not? (applicative? #ignore)))
+($assert (not? (applicative? #f)))
+($assert (not? (applicative? ())))
+($assert (not? (applicative? 'foo)))
+($assert (not? (applicative? 0.0)))
+($assert (not? (applicative? '(1 2))))
+($assert (not? (applicative? (make-environment))))
+($assert (not? (applicative? $if)))
+($assert (applicative? number?))
+
+;; $quote
+($assert (eq? 10 ($quote 10)))
+($assert (eq? #t ($quote #t)))
+
+;; eq?
+($assert (eq? #t #t))
+($assert (eq? 10 10))
+($assert (eq? eq? eq?))
+($assert (eq? $if $if))
+($assert (eq? () ()))
+($assert (not? (eq? '(1) '(1))))
+
+;; equal?
+($assert (equal? #t #t))
+($assert (equal? 10 10))
+($assert (equal? eq? eq?))
+($assert (equal? $if $if))
+($assert (equal? () ()))
+($assert (equal? '(1) '(1)))
+($assert (equal? '(1 $if #t (key . value) ()) '(1 $if #t (key . value) ())))
+
+;; eval
+($assert (eq? 10 (eval 10)))
+($assert (eq? 10 (eval '(+ 5 5))))
+($assert (eq? #t (eval #t)))
+
+;; $define!
+($define! ten 10)
+($define! plus +)
+($define! true #t)
+($assert (eq? 10 ten))
+($assert (eq? + plus))
+($assert (eq? true #t))
+
+;; $if
+($assert (eq? 10 ($if #t 10 11)))
+($assert (eq? 11 ($if #f 10 11)))
+
+;; cons
+($assert (equal? '(1 2 3 . 4) (cons 1 (cons 2 (cons 3 4)))))
+
+;; set-car!
+($define! temp '(1 2 3 . 4))
+(set-car! temp 4)
+($assert (equal? temp '(4 2 3 . 4)))
+
+;; set-cdr!
+(set-cdr! temp 10)
+($assert (equal? temp '(4 . 10)))
+
+;; make-environment
+($assert (environment? (make-environment)))
+
+;; $vau
+($define! $twin ($vau x #ignore (cons (car x) (car x))))
+($assert (equal? ($twin 10) '(10 . 10)))

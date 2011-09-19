@@ -25,8 +25,8 @@ int g_num_used_objs = 0;
 obj_t* g_env = KNULL;
 
 // root stack
-#define MAX_STACK_OBJS 30000
-#define MAX_STACK_FRAMES 3000
+#define MAX_STACK_OBJS 100000
+#define MAX_STACK_FRAMES 10000
 obj_t* g_stack[MAX_STACK_OBJS];
 int g_num_stack_objs;
 int g_stack_frames[MAX_STACK_FRAMES];
