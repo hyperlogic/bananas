@@ -118,7 +118,8 @@ static void _pool_free(obj_t* obj)
 
     // add to start of free list
     obj->next = g_free_objs;
-    g_free_objs->prev = obj;
+    if (g_free_objs)
+        g_free_objs->prev = obj;
     g_free_objs = obj;
     g_num_free_objs++;
 
