@@ -85,7 +85,7 @@ obj_t* parse_number(const char** pp)
     do {
         if (isdigit(PEEK(0)))
             ADVANCE();
-        else 
+        else
             break;
     } while(1);
 
@@ -99,7 +99,7 @@ obj_t* parse_number(const char** pp)
     while(1) {
         if (isdigit(PEEK(0)))
             ADVANCE();
-        else 
+        else
             break;
     }
 
@@ -136,17 +136,16 @@ obj_t* parse_list(const char** pp)
     }
     else {
         // EXPR+
-        obj_stack_frame_push();
-        obj_stack_push(KNULL); // 0 : root
-        obj_stack_push(KNULL); // 1 : pair
-        obj_stack_push(KNULL); // 2 : expr
-        obj_stack_push(KNULL); // 3 : temp
+        PUSHF();
+        PUSH4(KNULL, KNULL, KNULL, KNULL);  // root, pair, expr, temp
         do {
             obj_stack_set(2, parse_expr(pp));
             if (obj_is_null(obj_stack_get(1))) {
+                // first time thru the loop, initialize root.
                 obj_stack_set(0, obj_cons(obj_stack_get(2), KNULL));
                 obj_stack_set(1, obj_stack_get(0));
             } else {
+                // append expr onto end of root list.
                 obj_stack_set(3, obj_stack_get(1));
                 obj_stack_set(1, obj_cons(obj_stack_get(2), KNULL));
                 obj_set_cdr(obj_stack_get(3), obj_stack_get(1));
@@ -169,9 +168,7 @@ obj_t* parse_list(const char** pp)
             PARSE_ERROR("Expected ) after dotted expr");
         ADVANCE();
 
-        obj_t* result = obj_stack_get(0);
-        obj_stack_frame_pop();
-        return result;
+        POPF_RET(obj_stack_get(0));
     }
 }
 
@@ -182,14 +179,12 @@ obj_t* parse_quoted_expr(const char** pp)
     else
         PARSE_ERROR("Expected a quote");
 
-    obj_stack_frame_push();
-    obj_stack_push(parse_expr(pp));
-    obj_stack_push(obj_make_symbol("$quote"));
-    obj_stack_push(obj_cons(obj_stack_get(0), KNULL));
-    obj_stack_push(obj_cons(obj_stack_get(1), obj_stack_get(2)));
-    obj_t* result = obj_stack_get(3);
-    obj_stack_frame_pop();
-    return result;
+    PUSHF();
+    obj_t* expr = PUSH(parse_expr(pp));
+    obj_t* a = PUSH(obj_make_symbol("$quote"));
+    obj_t* d = PUSH(obj_cons(expr, KNULL));
+    obj_t* pair = PUSH(obj_cons(a, d));
+    POPF_RET(pair);
 }
 
 obj_t* parse_expr(const char** pp)
@@ -209,11 +204,10 @@ obj_t* parse_expr(const char** pp)
 obj_t* parse_expr_sequence(const char** pp)
 {
     // EXPR*
-    obj_stack_frame_push();
-    obj_stack_push(obj_make_symbol("$sequence"));   // 0
-    obj_stack_push(obj_cons(obj_stack_get(0), KNULL));  // 1
-    obj_stack_push(KNULL); // 2
-    obj_t* pair = obj_stack_get(1);
+    PUSHF();
+    obj_t* begin = PUSH(obj_make_symbol("$sequence"));
+    obj_t* pair = PUSH(obj_cons(begin, KNULL));
+    obj_t* temp = PUSH(KNULL);
     while (1) {
         parse_skip_whitespace(pp);
         if (PEEK(0) == 0)
@@ -222,9 +216,7 @@ obj_t* parse_expr_sequence(const char** pp)
         obj_set_cdr(pair, obj_cons(obj_stack_get(2), KNULL));
         pair = obj_cdr(pair);
     }
-    obj_t* result = obj_stack_get(1);
-    obj_stack_frame_pop();
-    return result;
+    POPF_RET(obj_stack_get(1));
 }
 
 obj_t* read(const char* str)

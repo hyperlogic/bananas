@@ -49,6 +49,16 @@ And use TCO.
 
 eq? is a beast, it eats nodes for breakfast.
 
+Scheme Notes
+====================
+
+Immediate Values
+---------------------
+* #t
+* #f
+* ()
+
+
 Kernel Notes
 ====================
 

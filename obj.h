@@ -88,6 +88,14 @@ void obj_stack_dump(const char* desc);  // TODO: REMOVE for debugging
         obj_stack_push(OBJ3);                   \
     } while (0)
 
+#define PUSH4(OBJ1, OBJ2, OBJ3, OBJ4)           \
+    do {                                        \
+        obj_stack_push(OBJ1);                   \
+        obj_stack_push(OBJ2);                   \
+        obj_stack_push(OBJ3);                   \
+        obj_stack_push(OBJ4);                   \
+    } while (0)
+
 #define POPF_RET(OBJ)                           \
     do {                                        \
         obj_t* __ret = OBJ;                     \
