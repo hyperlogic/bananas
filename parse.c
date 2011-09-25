@@ -58,14 +58,6 @@ obj_t* parse_symbol(const char** pp)
             return KTRUE;
         else if (len == 2 && start[1] == 'f')
             return KFALSE;
-        else if (len == 6 && strncmp(start + 1, "inert", len - 1) == 0)
-            return KINERT;
-        else if (len == 7 && strncmp(start + 1, "ignore", len - 1) == 0)
-            return KIGNORE;
-        else if (len == 11 && strncmp(start + 1, "e-infinity", len - 1) == 0)
-            return obj_make_number(-INFINITY);
-        else if (len == 11 && strncmp(start + 1, "e+infinity", len - 1) == 0)
-            return obj_make_number(INFINITY);
     }
 
     return obj_make_symbol2(start, *pp);
@@ -181,7 +173,7 @@ obj_t* parse_quoted_expr(const char** pp)
 
     PUSHF();
     obj_t* expr = PUSH(parse_expr(pp));
-    obj_t* a = PUSH(obj_make_symbol("$quote"));
+    obj_t* a = PUSH(obj_make_symbol("quote"));
     obj_t* d = PUSH(obj_cons(expr, KNULL));
     obj_t* pair = PUSH(obj_cons(a, d));
     POPF_RET(pair);
@@ -205,7 +197,7 @@ obj_t* parse_expr_sequence(const char** pp)
 {
     // EXPR*
     PUSHF();
-    obj_t* begin = PUSH(obj_make_symbol("$sequence"));
+    obj_t* begin = PUSH(obj_make_symbol("begin"));
     obj_t* pair = PUSH(obj_cons(begin, KNULL));
     obj_t* temp = PUSH(KNULL);
     while (1) {
