@@ -86,6 +86,7 @@ static obj_t* _pool_alloc()
     return obj;
 }
 
+/*
 static void _dump_list(const char* desc, obj_t* obj)
 {
     printf("%s = [", desc);
@@ -96,6 +97,7 @@ static void _dump_list(const char* desc, obj_t* obj)
     }
     printf("]\n");
 }
+*/
 
 static void _pool_free(obj_t* obj)
 {
@@ -130,21 +132,10 @@ static void _pool_free(obj_t* obj)
 }
 
 //
-// pool unit test
+// gc
 //
 
-static int _pool_num_free()
-{
-    int num_free = 0;
-    obj_t* free_objs = g_free_objs;
-    while (free_objs) {
-        num_free++;
-        free_objs = free_objs->next;
-    }
-    assert(g_num_free_objs == num_free);
-    return num_free;
-}
-
+#ifndef NDEBUG
 static int _pool_num_used()
 {
     int num_used = 0;
@@ -156,48 +147,7 @@ static int _pool_num_used()
     assert(g_num_used_objs == num_used);
     return num_used;
 }
-
-static void _pool_unit_test()
-{
-    assert(_pool_num_free() == MAX_OBJS);
-    assert(_pool_num_used() == 0);
-
-    // add 1 then remove
-    obj_t* obj = _pool_alloc();
-
-    assert(_pool_num_free() == MAX_OBJS - 1);
-    assert(_pool_num_used() == 1);
-
-    _pool_free(obj);
-
-    assert(_pool_num_free() == MAX_OBJS);
-    assert(_pool_num_used() == 0);
-
-    // add 10 then remove in weird order
-#define UNIT_OBJS 10
-    obj_t* objs[UNIT_OBJS];
-    int i;
-    for (i = 0; i < UNIT_OBJS; i++) {
-        objs[i] = _pool_alloc();
-    }
-
-    assert(_pool_num_free() == MAX_OBJS - UNIT_OBJS);
-    assert(_pool_num_used() == UNIT_OBJS);
-
-    int order[UNIT_OBJS] = {0, 2, 4, 6, 8, 9, 7, 5, 3, 1};
-
-    for (i = UNIT_OBJS - 1; i >= 0; i--) {
-        _pool_free(objs[order[i]]);
-    }
-
-    assert(_pool_num_free() == MAX_OBJS);
-    assert(_pool_num_used() == 0);
-#undef UNIT_OBJS
-}
-
-//
-// gc
-//
+#endif
 
 static void _gc_mark(obj_t* obj)
 {
@@ -211,7 +161,8 @@ static void _gc_mark(obj_t* obj)
         switch (obj->type) {
         case SYMBOL_OBJ:
         case NUMBER_OBJ:
-        case PRIM_OPERATIVE_OBJ:
+        case PRIM_FORM_OBJ:
+        case PRIM_PROC_OBJ:
             // These objs don't reference anything.
             break;
         case PAIR_OBJ:
@@ -222,14 +173,10 @@ static void _gc_mark(obj_t* obj)
             _gc_mark(obj->data.env.plist);
             _gc_mark(obj->data.env.parent);
             break;
-        case COMPOUND_OPERATIVE_OBJ:
-            _gc_mark(obj->data.compound_operative.formals);
-            _gc_mark(obj->data.compound_operative.eformal);
-            _gc_mark(obj->data.compound_operative.static_env);
-            _gc_mark(obj->data.compound_operative.body);
-            break;
-        case APPLICATIVE_OBJ:
-            _gc_mark(obj->data.applicative.operative);
+        case COMP_PROC_OBJ:
+            _gc_mark(obj->data.comp_proc.formals);
+            _gc_mark(obj->data.comp_proc.env);
+            _gc_mark(obj->data.comp_proc.body);
             break;
         default:
             assert(0);  // bad obj type!
@@ -251,14 +198,18 @@ void obj_gc()
 
     // sweep phase
     obj_t* p = g_used_objs;
+#ifndef NDEBUG
     int initial_count = _pool_num_used();
     int count = initial_count;
+#endif
     while (p) {
         obj_t* obj = p;
         p = p->next;
         if (obj->mark != g_mark) {
             _pool_free(obj);
+#ifndef NDEBUG
             count--;
+#endif
         }
     }
     assert(_pool_num_used() == count);
@@ -356,7 +307,6 @@ obj_t* obj_make_symbol(const char* str)
 #ifdef GC_DEBUG
     fprintf(stderr, "ALLOC obj %p, symbol = %s\n", obj, symbol_get(id));
 #endif
-
     return obj;
 }
 
@@ -374,7 +324,6 @@ obj_t* obj_make_symbol2(const char* start, const char* end)
 #ifdef GC_DEBUG
     fprintf(stderr, "ALLOC obj %p, symbol = %s\n", obj, symbol_get(id));
 #endif
-
     return obj;
 }
 
@@ -387,7 +336,6 @@ obj_t* obj_make_number(double num)
 #ifdef GC_DEBUG
     fprintf(stderr, "ALLOC obj %p, number = %f\n", obj, num);
 #endif
-
     return obj;
 }
 
@@ -402,7 +350,6 @@ obj_t* obj_make_number2(const char* start, const char* end)
         num = atof(temp);
         free(temp);
     }
-
     return obj_make_number(num);
 }
 
@@ -416,7 +363,6 @@ obj_t* obj_make_pair(obj_t* car, obj_t* cdr)
 #ifdef GC_DEBUG
     fprintf(stderr, "ALLOC obj %p, pair\n", obj);
 #endif
-
     return obj;
 }
 
@@ -430,49 +376,44 @@ obj_t* obj_make_environment(obj_t* plist, obj_t* parent)
 #ifdef GC_DEBUG
     fprintf(stderr, "ALLOC obj %p, environment\n", obj);
 #endif
-
     return obj;
 }
 
-obj_t* obj_make_prim_operative(prim_operative_t prim)
+obj_t* obj_make_prim_form(prim_func_t prim_func)
 {
     obj_t* obj = _pool_alloc();
-    obj->type = PRIM_OPERATIVE_OBJ;
-    obj->data.prim_operative = prim;  // prim is a c-function, no need to ref it.
+    obj->type = PRIM_FORM_OBJ;
+    obj->data.prim_func = prim_func;
 
 #ifdef GC_DEBUG
-    fprintf(stderr, "ALLOC obj %p, prim-operative\n", obj);
+    fprintf(stderr, "ALLOC obj %p, prim_form\n", obj);
 #endif
-
     return obj;
 }
 
-obj_t* obj_make_compound_operative(obj_t* formals, obj_t* eformal, obj_t* body, obj_t* static_env)
+obj_t* obj_make_prim_proc(prim_func_t prim_func)
 {
     obj_t* obj = _pool_alloc();
-    obj->type = COMPOUND_OPERATIVE_OBJ;
-    obj->data.compound_operative.formals = formals;
-    obj->data.compound_operative.eformal = eformal;
-    obj->data.compound_operative.body = body;
-    obj->data.compound_operative.static_env = static_env;
+    obj->type = PRIM_PROC_OBJ;
+    obj->data.prim_func = prim_func;
 
 #ifdef GC_DEBUG
-    fprintf(stderr, "ALLOC obj %p, compound-operative\n", obj);
+    fprintf(stderr, "ALLOC obj %p, prim_proc\n", obj);
 #endif
-
     return obj;
 }
 
-obj_t* obj_make_applicative(obj_t* operative)
+obj_t* obj_make_comp_proc(obj_t* formals, obj_t* env, obj_t* body)
 {
     obj_t* obj = _pool_alloc();
-    obj->type = APPLICATIVE_OBJ;
-    obj->data.applicative.operative = operative;
+    obj->type = COMP_PROC_OBJ;
+    obj->data.comp_proc.formals = formals;
+    obj->data.comp_proc.env = env;
+    obj->data.comp_proc.body = body;
 
 #ifdef GC_DEBUG
-    fprintf(stderr, "ALLOC obj %p, applicative\n", obj);
+    fprintf(stderr, "ALLOC obj %p, comp_proc\n", obj);
 #endif
-
     return obj;
 }
 
@@ -490,18 +431,6 @@ int obj_is_immediate(obj_t* obj)
 {
     assert(obj);
     return (long)obj & IMM_TAG;
-}
-
-int obj_is_inert(obj_t* obj)
-{
-    assert(obj);
-    return obj == KINERT;
-}
-
-int obj_is_ignore(obj_t* obj)
-{
-    assert(obj);
-    return obj == KIGNORE;
 }
 
 int obj_is_boolean(obj_t* obj)
@@ -528,12 +457,6 @@ int obj_is_number(obj_t* obj)
     return !obj_is_immediate(obj) && obj->type == NUMBER_OBJ;
 }
 
-int obj_is_inexact(obj_t* obj)
-{
-    assert(obj);
-    return 1;
-}
-
 int obj_is_pair(obj_t* obj)
 {
     assert(obj);
@@ -546,28 +469,28 @@ int obj_is_environment(obj_t* obj)
     return !obj_is_immediate(obj) && obj->type == ENV_OBJ;
 }
 
-int obj_is_prim_operative(obj_t* obj)
+int obj_is_prim_form(obj_t* obj)
 {
     assert(obj);
-    return !obj_is_immediate(obj) && obj->type == PRIM_OPERATIVE_OBJ;
+    return !obj_is_immediate(obj) && obj->type == PRIM_FORM_OBJ;
 }
 
-int obj_is_compound_operative(obj_t* obj)
+int obj_is_prim_proc(obj_t* obj)
 {
     assert(obj);
-    return !obj_is_immediate(obj) && obj->type == COMPOUND_OPERATIVE_OBJ;
+    return !obj_is_immediate(obj) && obj->type == PRIM_PROC_OBJ;
 }
 
-int obj_is_operative(obj_t* obj)
+int obj_is_comp_proc(obj_t* obj)
 {
     assert(obj);
-    return obj_is_prim_operative(obj) || obj_is_compound_operative(obj);
+    return !obj_is_immediate(obj) && obj->type == COMP_PROC_OBJ;
 }
 
-int obj_is_applicative(obj_t* obj)
+int obj_is_proc(obj_t* obj)
 {
     assert(obj);
-    return !obj_is_immediate(obj) && obj->type == APPLICATIVE_OBJ;
+    return !obj_is_immediate(obj) && (obj->type == PRIM_PROC_OBJ || obj->type == COMP_PROC_OBJ);
 }
 
 obj_t* obj_cons(obj_t* a, obj_t* b)
@@ -704,11 +627,7 @@ static obj_t* _assq(obj_t* key, obj_t* plist)
 void obj_dump(obj_t* obj, int to_stderr)
 {
     if (obj_is_immediate(obj)) {
-        if (obj == KIGNORE)
-            PRINTF("#ignore");
-        else if (obj == KINERT)
-            PRINTF("#inert");
-        else if (obj == KTRUE)
+        if (obj == KTRUE)
             PRINTF("#t");
         else if (obj == KFALSE)
             PRINTF("#f");
@@ -742,14 +661,14 @@ void obj_dump(obj_t* obj, int to_stderr)
         case ENV_OBJ:
             PRINTF("#<env 0x%p>", obj);
             break;
-        case PRIM_OPERATIVE_OBJ:
-            PRINTF("#<prim-operative 0x%p>", obj);
+        case PRIM_FORM_OBJ:
+            PRINTF("#<prim-form 0x%p>", obj);
             break;
-        case COMPOUND_OPERATIVE_OBJ:
-            PRINTF("#<compound-operative 0x%p>", obj);
+        case PRIM_PROC_OBJ:
+            PRINTF("#<prim-proc 0x%p>", obj);
             break;
-        case APPLICATIVE_OBJ:
-            PRINTF("#<applicative 0x%p>", obj);
+        case COMP_PROC_OBJ:
+            PRINTF("#<comp-proc 0x%p>", obj);
             break;
         case GARBAGE_OBJ:
             PRINTF("#<garbage %p>", obj);
@@ -766,7 +685,7 @@ obj_t* obj_eval_expr(obj_t* obj, obj_t* env)
     PUSHF();
     PUSH2(obj, env); // 0, 1
     obj_t* args = PUSH(obj_cons(obj, KNULL)); // 2
-    POPF_RET($eval(args, env));
+    POPF_RET(proc_eval(args, env));
 }
 
 obj_t* obj_eval_str(const char* str, obj_t* env)
@@ -793,25 +712,11 @@ void obj_init()
 
     prim_init();
 
-    // we need $sequence before we can load files.
-    // because files contain sequences of expressions.
-    const char* seq_str = "($define! $sequence ((wrap ($vau ($seq2) #ignore \
-                             ($seq2 ($define! $aux \
-                               ($vau (head . tail) env ($if (null? tail) \
-                                 (eval head env) ($seq2 \
-                                   (eval head env) \
-                                     (eval (cons $aux tail) env))))) \
-                                        ($vau body env ($if (null? body) \
-                                                            #inert (eval (cons $aux body) env)))))) \
-                     ($vau (first second) env ((wrap ($vau #ignore #ignore (eval second env))) \
-                                               (eval first env)))))";
-
-    // define $sequence first.
-    obj_eval_str(seq_str, g_env);
-
+    /*
     // bootstrap
     obj_eval_expr(read_file("bootstrap.ooo"), g_env);
 
     // unit-test  // TODO: isolate this into it's own env.
     obj_eval_expr(read_file("unit-test.ooo"), g_env);
+    */
 }

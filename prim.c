@@ -7,47 +7,48 @@
 
 typedef struct { 
     const char* name;
-    prim_operative_t prim;
-    int wrap;
+    prim_func_t func;
+    int form;
 } prim_info_t;
 
-static prim_info_t s_prim_infos[] = {
+#define TRUE 1
+#define FALSE 0
 
-    {"inert?", $is_inert, 1},
-    {"ignore?", $is_ignore, 1},
-    {"boolean?", $is_boolean, 1},
-    {"null?", $is_null, 1},
-    {"symbol?", $is_symbol, 1},
-    {"number?", $is_number, 1},
-    {"inexact?", $is_inexact, 1},
-    {"pair?", $is_pair, 1},
-    {"environment?", $is_environment, 1},
-    {"operative?", $is_operative, 1},
-    {"applicative?", $is_applicative, 1},
-    {"$quote", $quote, 0},
-    {"eq?", $eq, 1},
-    {"equal?", $equal, 1},
-    {"eval", $eval, 1},
-    {"$define!", $define, 0},
-    {"$if", $if, 0},
-    {"cons", $cons, 1},
-    {"set-car!", $set_car, 1},
-    {"set-cdr!", $set_cdr, 1},
-    {"make-environment", $make_environment, 1},
-    {"$vau", $vau, 0},
-    {"wrap", $wrap, 1},
-    {"unwrap", $unwrap, 1},
-    {"+", $add, 1},
-    {"-", $sub, 1},
-    {"*", $mul, 1},
-    {"/", $div, 1},
-    {">?", $num_gt, 1},
-    {">=?", $num_gteq, 1},
-    {"=?", $num_eq, 1},
-    {"<?", $num_lt, 1},
-    {"<=?", $num_lteq, 1},
-    {"abs", $num_abs, 1},
-    {"print", $print, 1},
+static prim_info_t s_prim_infos[] = {
+    // forms
+    {"define", form_define, TRUE},
+    {"if", form_if, TRUE},
+    {"quote", form_quote, TRUE},
+    {"set!", form_set, TRUE},
+    {"lambda", form_lambda, FALSE},
+
+    // procs
+    {"boolean?", proc_is_boolean, FALSE},
+    {"null?", proc_is_null, FALSE},
+    {"symbol?", proc_is_symbol, FALSE},
+    {"number?", proc_is_number, FALSE},
+    {"pair?", proc_is_pair, FALSE},
+    {"procedure?", proc_is_procedure, FALSE},
+    {"eq?", proc_is_eq, FALSE},
+    {"equal?", proc_is_equal, FALSE},
+    {"cons", proc_cons, FALSE},
+    {"car", proc_car, FALSE},
+    {"cdr", proc_cdr, FALSE},
+    {"set-car!", proc_set_car, FALSE},
+    {"set-cdr!", proc_set_cdr, FALSE},
+    {"+", proc_add, FALSE},
+    {"-", proc_sub, FALSE},
+    {"*", proc_mul, FALSE},
+    {"/", proc_div, FALSE},
+    {">", proc_num_gt, FALSE},
+    {">=", proc_num_gteq, FALSE},
+    {"=", proc_num_eq, FALSE},
+    {"<", proc_num_lt, FALSE},
+    {"<=", proc_num_lteq, FALSE},
+    {"abs", proc_num_abs, FALSE},
+    {"print", proc_print, FALSE},
+    {"eval", proc_eval, FALSE},
+
     {"", NULL}
 };
 
@@ -55,25 +56,206 @@ void prim_init()
 {
     // register prims
     prim_info_t* p = s_prim_infos;
-    while (p->prim) {
-        if (p->wrap) {
+    while (p->func) {
+        if (p->form) {
             PUSHF();
             obj_t* symbol = PUSH(obj_make_symbol(p->name));
-            obj_t* op = PUSH(obj_make_prim_operative(p->prim));
-            obj_t* app = PUSH(obj_make_applicative(op));
-            obj_env_define(g_env, symbol, app);
+            obj_t* obj = PUSH(obj_make_prim_form(p->func));
+            obj_env_define(g_env, symbol, obj);
             POPF();
         } else {
             PUSHF();
             obj_t* symbol = PUSH(obj_make_symbol(p->name));
-            obj_t* op = PUSH(obj_make_prim_operative(p->prim));
-            obj_env_define(g_env, symbol, op);
+            obj_t* obj = PUSH(obj_make_prim_proc(p->func));
+            obj_env_define(g_env, symbol, obj);
             POPF();
         }
         p++;
     }
 }
 
+obj_t* form_define(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* form_if(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* form_quote(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* form_set(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* form_lambda(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_is_boolean(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_is_null(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_is_symbol(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_is_number(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_is_pair(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_is_procedure(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_is_eq(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_is_equal(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_cons(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_car(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_cdr(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_set_car(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_set_cdr(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_add(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_sub(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_mul(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_div(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_num_gt(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_num_gteq(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_num_eq(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_num_lt(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_num_lteq(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_num_abs(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_print(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+obj_t* proc_eval(obj_t* obj, obj_t* env)
+{
+    assert(0);
+    return KNULL;
+}
+
+
+/*
 #define DEF_TYPE_PREDICATE(name)                \
     obj_t* $##name(obj_t* obj, obj_t* env)      \
     {                                           \
@@ -362,3 +544,4 @@ obj_t* $print(obj_t* obj, obj_t* env)
     printf("\n");
     return KINERT;
 }
+*/

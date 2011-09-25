@@ -199,7 +199,7 @@ obj_t* parse_expr_sequence(const char** pp)
     PUSHF();
     obj_t* begin = PUSH(obj_make_symbol("begin"));
     obj_t* pair = PUSH(obj_cons(begin, KNULL));
-    obj_t* temp = PUSH(KNULL);
+    PUSH(KNULL);
     while (1) {
         parse_skip_whitespace(pp);
         if (PEEK(0) == 0)
