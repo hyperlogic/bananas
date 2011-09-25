@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <math.h>
 
-typedef struct { 
+typedef struct {
     const char* name;
     prim_func_t func;
     int form;
@@ -13,6 +13,8 @@ typedef struct {
 
 #define TRUE 1
 #define FALSE 0
+
+static obj_t* _eval(obj_t* obj, obj_t* env);
 
 static prim_info_t s_prim_infos[] = {
     // forms
@@ -76,26 +78,57 @@ void prim_init()
 
 obj_t* form_define(obj_t* obj, obj_t* env)
 {
-    assert(0);
-    return KNULL;
+    assert(obj);
+    assert(obj_is_environment(env));
+    assert(!obj_is_garbage(obj));
+    PUSHF();
+    PUSH2(obj, env);
+
+    obj_t* symbol = PUSH(obj_car(obj));
+    obj_t* value = PUSH(_eval(obj_cadr(obj), env));
+    obj_env_define(env, symbol, value);
+    POPF_RET(symbol);
 }
 
 obj_t* form_if(obj_t* obj, obj_t* env)
 {
-    assert(0);
-    return KNULL;
+    assert(obj);
+    assert(obj_is_environment(env));
+    assert(!obj_is_garbage(obj));
+    PUSHF();
+    PUSH2(obj, env);
+
+    obj_t* pred = PUSH(_eval(obj_car(obj), env));
+    if (obj_is_null(pred) || pred == KFALSE)
+        if (obj_is_pair(obj_cdr(obj_cdr(obj))))
+            POPF_RET(_eval(obj_car(obj_cdr(obj_cdr(obj))), env));
+        else
+            POPF_RET(KNULL);
+    else
+        POPF_RET(_eval(obj_cadr(obj), env));
 }
 
 obj_t* form_quote(obj_t* obj, obj_t* env)
 {
-    assert(0);
-    return KNULL;
+    assert(obj);
+    assert(obj_is_environment(env));
+    assert(!obj_is_garbage(obj));
+
+    return obj_car(obj);
 }
 
 obj_t* form_set(obj_t* obj, obj_t* env)
 {
-    assert(0);
-    return KNULL;
+    assert(obj);
+    assert(obj_is_environment(env));
+    assert(!obj_is_garbage(obj));
+    PUSHF();
+
+    obj_t* symbol = PUSH(obj_car(obj));
+    obj_t* new_value = PUSH(_eval(obj_cadr(obj), env));
+    obj_t* old_value = PUSH(obj_env_lookup(env, symbol));
+    obj_env_define(env, symbol, new_value);
+    POPF_RET(old_value);
 }
 
 obj_t* form_lambda(obj_t* obj, obj_t* env)
@@ -248,12 +281,59 @@ obj_t* proc_print(obj_t* obj, obj_t* env)
     return KNULL;
 }
 
-obj_t* proc_eval(obj_t* obj, obj_t* env)
+static obj_t* _eval(obj_t* obj, obj_t* env)
 {
-    assert(0);
-    return KNULL;
+    assert(obj);
+    assert(obj_is_environment(env));
+    assert(!obj_is_garbage(obj));
+
+    PUSHF();
+    PUSH2(obj, env);
+
+    if (obj_is_symbol(obj)) {
+        POPF_RET(obj_env_lookup(env, obj));
+    } else if (obj_is_pair(obj)) {
+        obj_t* args = PUSH(obj_cons(obj_car(obj), KNULL));
+        obj_t* f = PUSH(proc_eval(args, env));
+        obj_t* d = PUSH(obj_cdr(obj));
+        switch (f->type) {
+        case PRIM_FORM_OBJ:
+            POPF_RET(f->data.prim_func(d, env));
+            break;
+        case PRIM_PROC_OBJ:
+            // TODO: eval args!
+            POPF_RET(f->data.prim_func(d, env));
+            break;
+        case COMP_PROC_OBJ:
+            assert(0);  // TODO: not implemented
+            POPF_RET(KNULL);
+            break;
+        default:
+            fprintf(stderr, "ERROR: f is not a procedure or form\n");
+            assert(0);  // bad f
+            POPF_RET(KNULL);
+        }
+    } else {
+        POPF_RET(obj);
+    }
 }
 
+obj_t* proc_eval(obj_t* obj, obj_t* env)
+{
+    assert(obj);
+    assert(obj_is_environment(env));
+    assert(!obj_is_garbage(obj));
+
+    PUSHF();
+    PUSH2(obj, env);
+
+    obj_t* a = obj_car(obj);
+    obj_t* d = obj_cdr(obj);
+    if (obj_is_pair(d))
+        POPF_RET(_eval(a, obj_car(d)));
+    else
+        POPF_RET(_eval(a, env));
+}
 
 /*
 #define DEF_TYPE_PREDICATE(name)                \

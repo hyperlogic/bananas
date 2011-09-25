@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     char* line = NULL;
     while (1) {
 
-        printf("  before gc: %d used objs\n", g_num_used_objs);
+        printf("   before gc: %d used objs\n", g_num_used_objs);
         obj_gc();
         printf("   after gc: %d used objs\n", g_num_used_objs);
         printf("   g_num_stack_frames = %d\n", g_num_stack_frames);
