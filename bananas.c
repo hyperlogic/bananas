@@ -13,6 +13,12 @@ int main(int argc, char* argv[])
 {
     obj_init();
 
+    // unit-test
+    PUSHF();
+    obj_t* unit_env = PUSH(obj_make_environment(KNULL, g_env));
+    obj_eval_expr(read_file("unit-test.scm"), unit_env);
+    POPF();
+
     PUSHF();
     obj_t* repl_env = PUSH(obj_make_environment(KNULL, g_env));
     char* line = NULL;
@@ -43,6 +49,5 @@ int main(int argc, char* argv[])
         POPF();
     }
     POPF();
-
     return 0;
 }

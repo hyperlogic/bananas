@@ -705,18 +705,10 @@ void obj_init()
     assert(sizeof(obj_t) == 64);
 
     _stack_init();
-
     _pool_init();
-
     g_env = obj_make_environment(KNULL, KNULL);
-
     prim_init();
 
-    /*
     // bootstrap
-    obj_eval_expr(read_file("bootstrap.ooo"), g_env);
-
-    // unit-test  // TODO: isolate this into it's own env.
-    obj_eval_expr(read_file("unit-test.ooo"), g_env);
-    */
+    obj_eval_expr(read_file("bootstrap.scm"), g_env);
 }
