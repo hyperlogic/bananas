@@ -156,38 +156,35 @@ obj_t* form_lambda(obj_t* obj, obj_t* env)
 obj_t* proc_func(obj_t* obj, obj_t* env)                           \
 {                                                                  \
     ENTRY_ASSERT();                                                \
-    return obj_func(_eval(obj_car(obj), env));                     \
+    return obj_func(obj_car(obj));                                 \
 }
 
 #define DEF_PROC2(proc_func, obj_func)                             \
 obj_t* proc_func(obj_t* obj, obj_t* env)                           \
 {                                                                  \
     ENTRY_ASSERT();                                                \
-    return obj_func(_eval(obj_car(obj), env),                      \
-                    _eval(obj_cadr(obj), env));                    \
+    return obj_func(obj_car(obj), obj_cadr(obj));                  \
 }
 
 #define DEF_BOOL_PROC(proc_func, obj_func)                         \
 obj_t* proc_func(obj_t* obj, obj_t* env)                           \
 {                                                                  \
     ENTRY_ASSERT();                                                \
-    return obj_func(_eval(obj_car(obj), env)) ? KTRUE : KFALSE;    \
+    return obj_func(obj_car(obj)) ? KTRUE : KFALSE;                \
 }
 
 #define DEF_BOOL_PROC2(proc_func, obj_func)                        \
 obj_t* proc_func(obj_t* obj, obj_t* env)                           \
 {                                                                  \
     ENTRY_ASSERT();                                                \
-    return obj_func(_eval(obj_car(obj), env),                      \
-                    _eval(obj_cadr(obj), env)) ? KTRUE : KFALSE;   \
+    return obj_func(obj_car(obj), obj_cadr(obj)) ? KTRUE : KFALSE; \
 }
 
 #define DEF_NULL_PROC2(proc_func, obj_func)                        \
 obj_t* proc_func(obj_t* obj, obj_t* env)                           \
 {                                                                  \
     ENTRY_ASSERT();                                                \
-    obj_func(_eval(obj_car(obj), env),                             \
-             _eval(obj_cadr(obj), env));                           \
+    obj_func(obj_car(obj), obj_cadr(obj));                         \
     return KNULL;                                                  \
 }
 
@@ -215,9 +212,8 @@ obj_t* proc_func(obj_t* obj, obj_t* env)            \
     PUSH(KNULL);                                    \
     obj_t* root = obj;                              \
     double accum = ident;                           \
-    while(obj_is_pair(obj)) {                       \
-        obj_stack_set(2, _eval(obj_car(obj), env)); \
-        obj_t* arg = obj_stack_get(2);              \
+    while (obj_is_pair(obj)) {                      \
+        obj_t* arg = obj_car(obj);                  \
         assert(obj_is_number(arg));                 \
         if (obj == root)                            \
             accum = arg->data.number;               \
@@ -238,13 +234,12 @@ obj_t* proc_sub(obj_t* obj, obj_t* env)
     ENTRY_ASSERT();
     PUSHF();
     PUSH2(obj, env);
-
     if (obj_is_null(obj)) {
         // no args
         POPF_RET(obj_make_number(0.0));
     } else if (obj_is_null(obj_cdr(obj))) {
         // one arg
-        obj_t* arg = PUSH(_eval(obj_car(obj), env));
+        obj_t* arg = obj_car(obj);
         POPF_RET(obj_make_number(-arg->data.number));
     } else if (obj_is_pair(obj_cdr(obj))) {
         // two or more args
@@ -252,8 +247,7 @@ obj_t* proc_sub(obj_t* obj, obj_t* env)
         double accum = 0.0f;
         PUSH(KNULL);
         while (obj_is_pair(obj)){
-            obj_stack_set(2, _eval(obj_car(obj), env));
-            obj_t* arg = obj_stack_get(2);
+            obj_t* arg = obj_car(obj);
             assert(obj_is_number(arg));
             if (obj == root)
                 accum = arg->data.number;
@@ -261,7 +255,6 @@ obj_t* proc_sub(obj_t* obj, obj_t* env)
                 accum -= arg->data.number;
             obj = obj_cdr(obj);
         }
-
         POPF_RET(obj_make_number(accum));
     } else {
         assert(0);
@@ -274,11 +267,9 @@ obj_t* proc_sub(obj_t* obj, obj_t* env)
 obj_t* proc_func(obj_t* obj, obj_t* env)                        \
 {                                                               \
     ENTRY_ASSERT();                                             \
-    PUSHF();                                                    \
-    PUSH2(obj, env);                                            \
-    obj_t* a = PUSH(_eval(obj_car(obj), env));                  \
+    obj_t* a = obj_car(obj);                                    \
     assert(obj_is_number(a));                                   \
-    obj_t* b = PUSH(_eval(obj_cadr(obj), env));                 \
+    obj_t* b = obj_cadr(obj);                                   \
     assert(obj_is_number(b));                                   \
     return a->data.number op b->data.number ? KTRUE : KFALSE;   \
 }
@@ -295,14 +286,32 @@ obj_t* proc_func(obj_t* obj, obj_t* env)                        \
     ENTRY_ASSERT();                                             \
     PUSHF();                                                    \
     PUSH2(obj, env);                                            \
-    obj_t* a = PUSH(_eval(obj_car(obj), env));                  \
+    obj_t* a = obj_car(obj);                                    \
     assert(obj_is_number(a));                                   \
     POPF_RET(obj_make_number(obj_func(a->data.number)));        \
+}
+
+// TODO: make this iterative.
+static obj_t* _map_eval(obj_t* obj, obj_t* env)
+{
+    PUSHF();
+    PUSH2(obj, env); // 0, 1
+    if (obj_is_null(obj)) {
+        POPF_RET(KNULL);
+    }
+    if (obj_is_pair(obj)) {
+        obj_t* a = PUSH(_eval(obj_car(obj), env));
+        POPF_RET(obj_cons(a, _map_eval(obj_cdr(obj), env)));
+    } else {
+        assert(0);
+        POPF_RET(KNULL);
+    }
 }
 
 MATH_FUNC(proc_num_abs, fabs)
 // TODO: sin, cos etc..
 
+// TODO: tail call optimization
 static obj_t* _eval(obj_t* obj, obj_t* env)
 {
     ENTRY_ASSERT();
@@ -317,9 +326,13 @@ static obj_t* _eval(obj_t* obj, obj_t* env)
         obj_t* d = PUSH(obj_cdr(obj));
         switch (f->type) {
         case PRIM_FORM_OBJ:
-        case PRIM_PROC_OBJ:
             POPF_RET(f->data.prim_func(d, env));
+        case PRIM_PROC_OBJ:
+        {
+            obj_t* dd = PUSH(_map_eval(d, env));
+            POPF_RET(f->data.prim_func(dd, env));
             break;
+        }
         case COMP_PROC_OBJ:
         {
             obj_t* dynamic_env = PUSH(obj_make_environment(KNULL, env));
@@ -349,7 +362,7 @@ obj_t* proc_eval(obj_t* obj, obj_t* env)
     PUSHF();
     PUSH2(obj, env);
 
-    obj_t* a = PUSH(_eval(obj_car(obj), env));
+    obj_t* a = obj_car(obj);
     obj_t* d = obj_cdr(obj);
     if (obj_is_pair(d))
         POPF_RET(_eval(a, obj_car(d)));
@@ -363,7 +376,7 @@ obj_t* proc_print(obj_t* obj, obj_t* env)
     PUSHF();
     PUSH(KNULL);
     while (obj_is_pair(obj)) {
-        obj_stack_set(0, _eval(obj_car(obj), env));
+        obj_stack_set(0, obj_car(obj));
         obj_dump(obj_stack_get(0), 0);
         printf(" ");
         obj = obj_cdr(obj);
@@ -377,7 +390,7 @@ obj_t* proc_not(obj_t* obj, obj_t* env)
     ENTRY_ASSERT();
     PUSHF();
     PUSH2(obj, env);
-    obj_t* a = PUSH(_eval(obj_car(obj), env));
+    obj_t* a = PUSH(obj_car(obj));
     POPF_RET((a == KNULL || a == KFALSE) ? KTRUE : KFALSE);
 }
 
