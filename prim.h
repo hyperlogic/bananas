@@ -9,6 +9,7 @@ void prim_init();
 obj_t* form_define(obj_t* obj, obj_t* env);
 obj_t* form_if(obj_t* obj, obj_t* env);
 obj_t* form_quote(obj_t* obj, obj_t* env);
+obj_t* form_quasiquote(obj_t* obj, obj_t* env);
 obj_t* form_set(obj_t* obj, obj_t* env);
 obj_t* form_begin(obj_t* obj, obj_t* env);
 obj_t* form_lambda(obj_t* obj, obj_t* env);

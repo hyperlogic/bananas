@@ -45,8 +45,70 @@ tco
 Scheme Notes
 ====================
 
-Immediate Values
----------------------
-* #t
-* #f
-* ()
+Chapter 2 - Lexical Conventions
+----------------------------------
+
+Probably not going to implment:
+
+* strings "foo"
+* character constants #\a
+* [ ] { } | 
+
+Might implement at some point:
+
+* quasi-quote support ` , ,@
+* vector constants #(1 2 3)
+
+Chapter 3 - Variables, syntactic keywords and regions
+-----------------------------------------------------------
+
+There is a distinction between syntactic keywords and identifiers.
+
+Type predicates, I don't have.
+
+* char?
+* string?
+* port?
+* vector? - i might want this at some point.
+
+environment? is not listed.
+
+Tail recursion.
+-------------------------
+lambdas implicitly can have more then one expression, and the last one occurs in "tail context"
+true and false alternatives of if statements occur in "tail context"
+the else expression of a case statement is in "tail context"
+The last expression in an and statment is in "tail context"
+The last expression in an or statment is in "tail context"
+The body of a let, let* or letrec
+The body of let-syntax, letrec-syntax
+The last in a begin
+The exit expression of a loop?
+
+Chapter 4 - Expressions
+---------------------------
+
+TODO: lambda bodies can have more then one statment.
+TODO: lambda formals of the form x
+TODO: lambda formals of the form (a b c . d)
+
+TODO: cond, case, and, or: can apparently be specified as macros.
+
+TODO: let, let*, letrec: can also be implemented as macros
+TODO: begin as a macro
+TODO: do as a macro
+TODO: named let as a macro
+TODO: delay as a macro
+
+TODO: quasi-quote
+
+TODO: let-syntax
+
+TODO: letrec-syntax
+
+Chapter 5 - Program Structure
+----------------------------------
+
+TODO: define alternate form (define (plus a b) (+ a b))
+
+...

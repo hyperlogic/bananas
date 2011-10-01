@@ -164,18 +164,14 @@ obj_t* parse_list(const char** pp)
     }
 }
 
-obj_t* parse_quoted_expr(const char** pp)
+obj_t* parse_quote_expr(const char** pp, const char* name)
 {
-    if (PEEK(0) == '\'')
-        ADVANCE();
-    else
-        PARSE_ERROR("Expected a quote");
-
+    ADVANCE();
     PUSHF();
     obj_t* expr = PUSH(parse_expr(pp));
-    obj_t* a = PUSH(obj_make_symbol("quote"));
+    obj_t* symbol = PUSH(obj_make_symbol(name));
     obj_t* d = PUSH(obj_cons(expr, KNULL));
-    obj_t* pair = PUSH(obj_cons(a, d));
+    obj_t* pair = PUSH(obj_cons(symbol, d));
     POPF_RET(pair);
 }
 
@@ -188,7 +184,11 @@ obj_t* parse_expr(const char** pp)
     else if (PEEK(0) == '(')
         return parse_list(pp);
     else if (PEEK(0) == '\'')
-        return parse_quoted_expr(pp);
+        return parse_quote_expr(pp, "quote");
+    else if (PEEK(0) == ',')
+        return parse_quote_expr(pp, "unquote");
+    else if (PEEK(0) == '`')
+        return parse_quote_expr(pp, "quasiquote");
     else
         return parse_atom(pp);
 }

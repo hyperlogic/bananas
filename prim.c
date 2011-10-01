@@ -21,6 +21,7 @@ static prim_info_t s_prim_infos[] = {
     {"define", form_define, TRUE},
     {"if", form_if, TRUE},
     {"quote", form_quote, TRUE},
+    {"quasiquote", form_quasiquote, TRUE},
     {"set!", form_set, TRUE},
     {"begin", form_begin, TRUE},
     {"lambda", form_lambda, TRUE},
@@ -117,6 +118,41 @@ obj_t* form_quote(obj_t* obj, obj_t* env)
 {
     ENTRY_ASSERT();
     return obj_car(obj);
+}
+
+static obj_t* _unquoted(obj_t* e, obj_t* env)
+{
+    if (obj_is_pair(e)) {
+        obj_t* a = obj_car(e);
+        obj_t* unquote = obj_make_symbol("unquote");
+        if (obj_is_symbol(a) && obj_is_eq(a, unquote)) {
+            return _eval(obj_cadr(e), env);
+        }
+    }
+    return e;
+}
+
+static obj_t* _quasiquote(obj_t* obj, obj_t* env)
+{
+    if (!obj_is_pair(obj))
+        return obj;
+    else {
+        obj_t* a = obj_car(obj);
+        obj_t* e = PUSH(_unquoted(a, env));
+        return PUSH(obj_cons(e, _quasiquote(obj_cdr(obj), env)));
+    }
+}
+
+obj_t* form_quasiquote(obj_t* obj, obj_t* env)
+{
+    ENTRY_ASSERT();
+    PUSHF();
+    PUSH2(obj, env);
+    obj_t* a = obj_car(obj);
+    if (obj_is_pair(obj))
+        POPF_RET(_quasiquote(a, env));
+    else
+        POPF_RET(a);
 }
 
 obj_t* form_set(obj_t* obj, obj_t* env)
