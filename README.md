@@ -3,6 +3,8 @@ Bananas
 
 Monkeys love bananas, parenthesis, not so much.
 
+Almost but not quite, entirely unlike scheme.
+
 Garbage-Collection stack
 ----------------------------
 GC can happen anytime a new obj is allocated.
