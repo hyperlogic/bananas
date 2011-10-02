@@ -1,4 +1,3 @@
-// (setq show-trailing-whitespace t)
 #include "obj.h"
 #include "parse.h"
 #include "symbol.h"
@@ -74,6 +73,7 @@ static obj_t* _pool_alloc()
     g_num_free_objs--;
 
     // add to front of used list
+    obj->prev = NULL;
     obj->next = g_used_objs;
     if (g_used_objs)
         g_used_objs->prev = obj;
@@ -85,19 +85,6 @@ static obj_t* _pool_alloc()
     obj->mark = 0;
     return obj;
 }
-
-/*
-static void _dump_list(const char* desc, obj_t* obj)
-{
-    printf("%s = [", desc);
-    obj_t* p = obj;
-    while (p) {
-        printf(" <%p prev = %p, next = %p> ", p, p->prev, p->next);
-        p = p->next;
-    }
-    printf("]\n");
-}
-*/
 
 static void _pool_free(obj_t* obj)
 {
@@ -130,6 +117,19 @@ static void _pool_free(obj_t* obj)
 
     assert(g_num_used_objs + g_num_free_objs == MAX_OBJS);
 }
+
+#ifdef GC_DEBUG
+static void _dump_list(const char* desc, obj_t* obj)
+{
+    fprintf(stderr, "%s = [\n", desc);
+    obj_t* p = obj;
+    while (p) {
+        fprintf(stderr, "    <%p prev = %p, next = %p>\n", p, p->prev, p->next);
+        p = p->next;
+    }
+    fprintf(stderr, "]\n");
+}
+#endif
 
 //
 // gc
@@ -187,6 +187,10 @@ static void _gc_mark(obj_t* obj)
 
 void obj_gc()
 {
+#if GC_DEBUG
+    // _dump_list("g_used_objs", g_used_objs);
+#endif
+
     // mark phase
     g_mark++;
     assert(obj_is_environment(g_env));
@@ -587,13 +591,12 @@ void obj_env_define(obj_t* env, obj_t* symbol, obj_t* value)
     assert(obj_is_environment(env));
 
     PUSHF();
-    PUSH3(env, symbol, value); // 0, 1, 2
-    obj_t* pair = PUSH(_assq(symbol, env->data.env.plist));  // 3
+    PUSH3(env, symbol, value);
+    obj_t* pair = PUSH(_assq(symbol, env->data.env.plist));
     if (obj_is_null(pair)) {
         // did not find it. so add a new property to the beginning of the plist.
-        obj_t* plist = env->data.env.plist;
-        obj_t* pair = PUSH(obj_cons(symbol, value)); // 4
-        env->data.env.plist = obj_cons(pair, plist);
+        pair = PUSH(obj_cons(symbol, value));
+        env->data.env.plist = obj_cons(pair, env->data.env.plist);
     } else {
         // found it, change the value
         obj_set_cdr(pair, value);

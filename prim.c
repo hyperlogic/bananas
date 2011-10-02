@@ -159,6 +159,7 @@ obj_t* form_set(obj_t* obj, obj_t* env)
 {
     ENTRY_ASSERT();
     PUSHF();
+    PUSH2(obj, env);
     obj_t* symbol = PUSH(obj_car(obj));
     obj_t* new_value = PUSH(_eval(obj_cadr(obj), env));
     obj_t* old_value = PUSH(obj_env_lookup(env, symbol));
